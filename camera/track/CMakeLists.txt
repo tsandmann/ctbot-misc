@@ -25,4 +25,4 @@ set_property(TARGET trac PROPERTY C_STANDARD_REQUIRED ON)
 set_property(TARGET trac PROPERTY CXX_STANDARD 14)
 set_property(TARGET trac PROPERTY CXX_STANDARD_REQUIRED ON)
 
-add_custom_command(TARGET trac POST_BUILD COMMAND scp trac pi@ctbot:)
+#add_custom_command(TARGET trac POST_BUILD COMMAND scp trac pi@ctbot:)
