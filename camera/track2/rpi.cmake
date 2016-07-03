@@ -15,7 +15,7 @@ set(CMAKE_CXX_COMPILER "armv8l-linux-gnueabihf-g++")
 set(BOOST_ROOT "/usr/local/armv8l-unknown-linux-gnueabihf/armv8l-unknown-linux-gnueabihf/sysroot/usr")
 
 
-SET(LOCAL_INCLUDE "${CMAKE_SYSROOT}/usr/local/include")
+SET(LOCAL_INCLUDE "${CMAKE_SYSROOT}/usr/local/opencv_qt/include" "${CMAKE_SYSROOT}/usr/local/include")
 SET(LOCAL_LIB_QT "${CMAKE_SYSROOT}/usr/local/opencv_qt/lib")
 SET(OPT_LIB "${CMAKE_SYSROOT}/opt/vc/lib")
 

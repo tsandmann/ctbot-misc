@@ -6,6 +6,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/xphoto.hpp>
 #include <raspicam/raspicam_cv.h>
 #include <iostream>
 #include <cstdlib>
@@ -47,44 +48,95 @@ int main(int, char**) {
 	cv::moveWindow("Thresh", 650, 0);
 	cv::moveWindow("Contours", 1300, 0);
 
-	int thresh_h[] {0, 18};
-	int thresh_s[] {190, 255};
-	int thresh_v[] {184, 255};
+	int thresh_h[] {90, 140};
+	int thresh_s[] {20, 200};
+	int thresh_v[] {180, 255};
 
-	cv::createTrackbar(" H min:", "Source", &thresh_h[0], max_thresh, nullptr);
-	cv::createTrackbar(" H max:", "Source", &thresh_h[1], max_thresh, nullptr);
-	cv::createTrackbar(" S min:", "Source", &thresh_s[0], max_thresh, nullptr);
-	cv::createTrackbar(" S max:", "Source", &thresh_s[1], max_thresh, nullptr);
-	cv::createTrackbar(" V min:", "Source", &thresh_v[0], max_thresh, nullptr);
-	cv::createTrackbar(" V max:", "Source", &thresh_v[1], max_thresh, nullptr);
+	cv::createTrackbar(" H min:", "Thresh", &thresh_h[0], max_thresh, nullptr);
+	cv::createTrackbar(" H max:", "Thresh", &thresh_h[1], max_thresh, nullptr);
+	cv::createTrackbar(" S min:", "Thresh", &thresh_s[0], max_thresh, nullptr);
+	cv::createTrackbar(" S max:", "Thresh", &thresh_s[1], max_thresh, nullptr);
+	cv::createTrackbar(" V min:", "Thresh", &thresh_v[0], max_thresh, nullptr);
+	cv::createTrackbar(" V max:", "Thresh", &thresh_v[1], max_thresh, nullptr);
 
 
-	while (true) {
-		if (! camera.grab()) {
-			break;
+	try {
+		while (true) {
+			if (! camera.grab()) {
+				break;
+			}
+			camera.retrieve(src);
+
+			cv::xphoto::balanceWhite(src, src, cv::xphoto::WHITE_BALANCE_SIMPLE);
+
+//			cv::Mat lab;
+//			cv::cvtColor(src, lab, CV_RGB2Lab);
+
+			imshow("Source", src);
+
+//			// Convert image to gray and blur it
+//			cv::cvtColor(src, src_gray, cv::COLOR_BGR2GRAY);
+//			cv::blur(src_gray, src_gray, cv::Size(3, 3));
+
+			// Convert the image into an HSV image
+			cv::cvtColor(src, src_hsv, CV_RGB2HLS);
+
+//			std::vector<cv::Mat> channels;
+//			cv::split(src_hsv, channels);
+//			for (auto& c : channels) {
+//				//cv::equalizeHist(c, c);
+//			}
+//			cv::equalizeHist(channels[2], channels[2]);
+//			cv::merge(channels, src_hsv);
+
+
+//			// Extract the L channel
+//			std::vector<cv::Mat> lab_planes(3);
+//			cv::split(lab, lab_planes); // now we have the L image in lab_planes[0]
+//
+//			// apply the CLAHE algorithm to the L channel
+//			cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE();
+//			clahe->setClipLimit(4);
+//			cv::Mat dst;
+//			clahe->apply(lab_planes[0], dst);
+//
+//			// Merge the the color planes back into an Lab image
+//			dst.copyTo(lab_planes[0]);
+//			cv::merge(lab_planes, lab);
+//
+//			// convert back to RGB
+//			cv::Mat image_clahe;
+//			cv::cvtColor(lab, image_clahe, CV_Lab2RGB);
+//
+//			imshow("Thresh", image_clahe);
+//			cv::cvtColor(image_clahe, src_hsv, CV_RGB2HSV);
+	//		imshow("Source", src_hsv);
+
+
+			// Values 20,100,100 to 30,255,255 working perfect for yellow at around 6pm
+			cv::inRange(src_hsv, cv::Scalar(thresh_h[0], thresh_s[0], thresh_v[0]), cv::Scalar(thresh_h[1], thresh_s[1], thresh_v[1]), src_thresh);
+
+			// morphological opening (remove small objects from the foreground)
+			cv::erode(src_thresh, src_thresh, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10)));
+			cv::dilate(src_thresh, src_thresh, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10)));
+
+			// morphological closing (fill small holes in the foreground)
+			cv::dilate(src_thresh, src_thresh, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10)));
+			cv::erode(src_thresh, src_thresh, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10)));
+
+			imshow("Thresh", src_thresh);
+
+			calc_threshold();
+
+
+			if (cv::waitKey(30) == 'q') {
+				break;
+			}
 		}
-		camera.retrieve(src);
-
-//		// Convert image to gray and blur it
-//		cv::cvtColor(src, src_gray, cv::COLOR_BGR2GRAY);
-//		cv::blur(src_gray, src_gray, cv::Size(3, 3));
-
-		// Convert the image into an HSV image
-		cv::cvtColor(src, src_hsv, CV_BGR2HSV);
-
-		// Values 20,100,100 to 30,255,255 working perfect for yellow at around 6pm
-		cv::inRange(src_hsv, cv::Scalar(thresh_h[0], thresh_s[0], thresh_v[0]), cv::Scalar(thresh_h[1], thresh_s[1], thresh_v[1]), src_thresh);
-
-
-		// Show images in a window
-		imshow("Source", src);
-		imshow("Thresh", src_thresh);
-
-		calc_threshold();
-
-		cv::waitKey(30);
+	} catch (const std::exception& e) {
+		std::cerr << "main(): Exception: \"" << e.what() << "\"\n";
+		return 1;
 	}
-
 	return 0;
 }
 
@@ -93,13 +145,13 @@ int main(int, char**) {
  */
 void calc_threshold() {
 	static std::vector<cv::Scalar> colors;
+	static int posX {0};
+	static int posY {0};
+	static cv::Mat movements {cv::Mat::zeros(src_thresh.size(), CV_8UC3)};
 
 //	cv::Mat threshold_output;
 	std::vector<std::vector<cv::Point>> contours;
 	std::vector<cv::Vec4i> hierarchy;
-
-	// Detect edges using Threshold
-//	cv::threshold(src_gray, threshold_output, thresh, 255, cv::THRESH_BINARY);
 
 	// Find contours
 //	cv::findContours(threshold_output, contours, hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
@@ -119,16 +171,40 @@ void calc_threshold() {
 
 	// Draw polygonal contour + bonding rects + circles
 	cv::Mat drawing(cv::Mat::zeros(src_thresh.size(), CV_8UC3));
+	size_t j(0);
 	for (size_t i(0); i < contours.size(); ++i) {
-		if (boundRect[i].area() > 200) {
+		if (boundRect[i].area() > 1000) {
 			std::cout << "boundRect[i].area()=" << boundRect[i].area() << "\n";
-			if (colors.size() <= i) {
+			if (colors.size() <= j) {
 				colors.push_back(cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255)));
 			}
-			cv::drawContours(drawing, contours_poly, static_cast<int>(i), colors[i], 1, 8, std::vector<cv::Vec4i>(), 0, cv::Point());
-			cv::rectangle(drawing, boundRect[i].tl(), boundRect[i].br(), colors[i], 2, 8, 0);
-			cv::circle(drawing, center[i], static_cast<int>(radius[i]), colors[i], 2, 8, 0);
+			cv::drawContours(drawing, contours_poly, static_cast<int>(i), colors[j], 1, 8, std::vector<cv::Vec4i>(), 0, cv::Point());
+			cv::rectangle(drawing, boundRect[i].tl(), boundRect[i].br(), colors[j], 2, 8, 0);
+			cv::circle(drawing, center[i], static_cast<int>(radius[i]), colors[j], 2, 8, 0);
+			++j;
 		}
+	}
+	if (j) {
+		size_t max(0);
+		if (j > 1) {
+			for (auto i(0); i < boundRect.size(); ++i) {
+				if (boundRect[i].area() > boundRect[max].area()) {
+					max = i;
+				}
+			}
+		}
+
+		const int x(boundRect[max].x + boundRect[max].width / 2);
+		const int y(boundRect[max].y + boundRect[max].height / 2);
+
+		if (x > 0 && y > 0 && posX > 0 && posY > 0) {
+			// Draw a yellow line from the previous point to the current point
+			cv::line(movements, cv::Point(x, y), cvPoint(posX, posY), cv::Scalar(0, 255, 255), 3);
+			cv::add(drawing, movements, drawing);
+		}
+
+		posX = x;
+		posY = y;
 	}
 
 	// Show drawings in a window

@@ -30,7 +30,7 @@ link_directories(${LOCAL_LIB_QT} ${OPT_LIB})
 set (raspicam_LIBS vcos mmal_vc_client mmal_components vchiq_arm vcsm containers mmal_core mmal_util mmal raspicam raspicam_cv)
 set (OpenCV_LIBS 
     opencv_videostab opencv_videoio opencv_video opencv_superres opencv_stitching opencv_shape opencv_photo opencv_objdetect opencv_ml
-    opencv_imgproc opencv_imgcodecs opencv_highgui opencv_flann opencv_features2d opencv_core opencv_calib3d opencv_imgproc
+    opencv_imgproc opencv_imgcodecs opencv_highgui opencv_flann opencv_features2d opencv_core opencv_calib3d opencv_imgproc opencv_xphoto
 )
 
 set (QT5_LIBS Qt5Core Qt5Widgets Qt5Gui Qt5Test Qt5OpenGL GL)
@@ -44,4 +44,4 @@ set_property(TARGET trac2 PROPERTY C_STANDARD_REQUIRED ON)
 set_property(TARGET trac2 PROPERTY CXX_STANDARD 14)
 set_property(TARGET trac2 PROPERTY CXX_STANDARD_REQUIRED ON)
 
-#add_custom_command(TARGET trac2 POST_BUILD COMMAND scp trac2 pi@ctbot:)
+add_custom_command(TARGET trac2 POST_BUILD COMMAND scp trac2 pi@192.168.1.33:)
