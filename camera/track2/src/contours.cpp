@@ -11,32 +11,44 @@
 #include <iostream>
 #include <cstdlib>
 
+#include "tcp_server.h"
+
 
 static cv::Mat src, src_hsv, src_thresh;
 static cv::Mat src_gray;
 static constexpr int max_thresh {255};
+static constexpr int width {320};
+static constexpr int height {240};
 static cv::RNG rng(54321);
 
 
-void calc_threshold();
+void calc_threshold(int& x, int& y);
 
 /**
  * @function main
  */
 int main(int, char**) {
+	TCP_Server tcp_server("10003", true);
+
 	raspicam::RaspiCam_Cv camera;
 	cv::Mat frame;
 
 	// Set camera params
 	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3); // color
-	camera.set(CV_CAP_PROP_FRAME_WIDTH, 640);
-	camera.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
+	camera.set(CV_CAP_PROP_FRAME_WIDTH, width);
+	camera.set(CV_CAP_PROP_FRAME_HEIGHT, height);
 
 	// Open camera
 	std::cout << "Opening camera...\n";
 	if (! camera.open()) {
 		std::cerr << "Error opening camera!\n";
-		return -1;
+		return EXIT_FAILURE;
+	}
+
+	std::cout << "Starting TCP server, waiting for connection..\n";
+	if (! tcp_server.init()) {
+		std::cerr << "Error init tcp server!\n";
+		return EXIT_FAILURE;
 	}
 
 	// Create Windows
@@ -59,6 +71,7 @@ int main(int, char**) {
 	cv::createTrackbar(" V min:", "Thresh", &thresh_v[0], max_thresh, nullptr);
 	cv::createTrackbar(" V max:", "Thresh", &thresh_v[1], max_thresh, nullptr);
 
+	int x = 0, y = 0;
 
 	try {
 		while (true) {
@@ -110,7 +123,7 @@ int main(int, char**) {
 //
 //			imshow("Thresh", image_clahe);
 //			cv::cvtColor(image_clahe, src_hsv, CV_RGB2HSV);
-	//		imshow("Source", src_hsv);
+		//	imshow("Source", src_hsv);
 
 
 			// Values 20,100,100 to 30,255,255 working perfect for yellow at around 6pm
@@ -126,7 +139,17 @@ int main(int, char**) {
 
 			imshow("Thresh", src_thresh);
 
-			calc_threshold();
+			calc_threshold(x, y);
+
+			if (tcp_server.get_ready()) {
+				try {
+					int pos[2] { x, y };
+					tcp_server.send(pos, sizeof(pos));
+				} catch (const std::exception& e) {
+					std::cerr << "Exception: \"" << e.what() << "\"\n";
+					return EXIT_FAILURE;
+				}
+			}
 
 
 			if (cv::waitKey(30) == 'q') {
@@ -135,15 +158,15 @@ int main(int, char**) {
 		}
 	} catch (const std::exception& e) {
 		std::cerr << "main(): Exception: \"" << e.what() << "\"\n";
-		return 1;
+		return EXIT_FAILURE;
 	}
-	return 0;
+	return EXIT_SUCCESS;
 }
 
 /**
  * @function calc_threshold
  */
-void calc_threshold() {
+void calc_threshold(int& x, int& y) {
 	static std::vector<cv::Scalar> colors;
 	static int posX {0};
 	static int posY {0};
@@ -173,8 +196,8 @@ void calc_threshold() {
 	cv::Mat drawing(cv::Mat::zeros(src_thresh.size(), CV_8UC3));
 	size_t j(0);
 	for (size_t i(0); i < contours.size(); ++i) {
-		if (boundRect[i].area() > 1000) {
-			std::cout << "boundRect[i].area()=" << boundRect[i].area() << "\n";
+		if (boundRect[i].area() > 300) {
+//			std::cout << "boundRect[i].area()=" << boundRect[i].area() << "\n";
 			if (colors.size() <= j) {
 				colors.push_back(cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255)));
 			}
@@ -194,13 +217,14 @@ void calc_threshold() {
 			}
 		}
 
-		const int x(boundRect[max].x + boundRect[max].width / 2);
-		const int y(boundRect[max].y + boundRect[max].height / 2);
+		x = boundRect[max].x + boundRect[max].width / 2;
+		y = boundRect[max].y + boundRect[max].height / 2;
 
 		if (x > 0 && y > 0 && posX > 0 && posY > 0) {
 			// Draw a yellow line from the previous point to the current point
 			cv::line(movements, cv::Point(x, y), cvPoint(posX, posY), cv::Scalar(0, 255, 255), 3);
 			cv::add(drawing, movements, drawing);
+			std::cout << "x=" << x << "\ty=" << y << std::endl;
 		}
 
 		posX = x;

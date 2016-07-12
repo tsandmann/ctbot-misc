@@ -65,7 +65,7 @@ int main() {
 			break;
 		}
 		Camera.retrieve(frame_mat);
-		
+
 		// Will hold a frame captured from the camera
 		IplImage frame = frame_mat;
 		
