@@ -1,7 +1,8 @@
 /**
- * @function contours.cpp
- * @brief Demo code to find contours in an image, based on https://github.com/Itseez/opencv/blob/master/samples/cpp/tutorial_code/ShapeDescriptors/generalContours_demo1.cpp
+ * \brief Demo code to find contours in an image, based on https://github.com/Itseez/opencv/blob/master/samples/cpp/tutorial_code/ShapeDescriptors/generalContours_demo1.cpp
  */
+
+#include "tcp_server.h"
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -11,22 +12,18 @@
 #include <iostream>
 #include <cstdlib>
 
-#include "tcp_server.h"
-
 
 static cv::Mat src, src_hsv, src_thresh;
 static cv::Mat src_gray;
 static constexpr int max_thresh {255};
-static constexpr int width {320};
-static constexpr int height {240};
+static constexpr int width {640};
+static constexpr int height {480};
 static cv::RNG rng(54321);
 
 
 void calc_threshold(int& x, int& y);
 
-/**
- * @function main
- */
+
 int main(int, char**) {
 	TCP_Server tcp_server("10003", true);
 
@@ -34,7 +31,7 @@ int main(int, char**) {
 	cv::Mat frame;
 
 	// Set camera params
-	camera.set(CV_CAP_PROP_FORMAT, CV_8UC3); // color
+	camera.set(CV_CAP_PROP_FORMAT, CV_8UC1); // color mode
 	camera.set(CV_CAP_PROP_FRAME_WIDTH, width);
 	camera.set(CV_CAP_PROP_FRAME_HEIGHT, height);
 
@@ -80,7 +77,15 @@ int main(int, char**) {
 			}
 			camera.retrieve(src);
 
+	//		cv::cvtColor(src, src_gray, CV_BGR2GRAY);
+
 			cv::xphoto::balanceWhite(src, src, cv::xphoto::WHITE_BALANCE_SIMPLE);
+	//		cv::threshold(src, src, 128, 255, CV_THRESH_BINARY);
+
+			src.copyTo(src_gray);
+
+			cv::blur(src, src_gray, cv::Size(3,3) );
+			cv::Canny(src, src_gray, 80, 240, 3);
 
 //			cv::Mat lab;
 //			cv::cvtColor(src, lab, CV_RGB2Lab);
@@ -92,7 +97,7 @@ int main(int, char**) {
 //			cv::blur(src_gray, src_gray, cv::Size(3, 3));
 
 			// Convert the image into an HSV image
-			cv::cvtColor(src, src_hsv, CV_RGB2HLS);
+		//	cv::cvtColor(src, src_hsv, CV_RGB2HLS);
 
 //			std::vector<cv::Mat> channels;
 //			cv::split(src_hsv, channels);
@@ -127,18 +132,21 @@ int main(int, char**) {
 
 
 			// Values 20,100,100 to 30,255,255 working perfect for yellow at around 6pm
-			cv::inRange(src_hsv, cv::Scalar(thresh_h[0], thresh_s[0], thresh_v[0]), cv::Scalar(thresh_h[1], thresh_s[1], thresh_v[1]), src_thresh);
+	//		cv::inRange(src_hsv, cv::Scalar(thresh_h[0], thresh_s[0], thresh_v[0]), cv::Scalar(thresh_h[1], thresh_s[1], thresh_v[1]), src_thresh);
 
-			// morphological opening (remove small objects from the foreground)
-			cv::erode(src_thresh, src_thresh, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10)));
-			cv::dilate(src_thresh, src_thresh, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10)));
+//			// morphological opening (remove small objects from the foreground)
+//			cv::erode(src_gray, src_gray, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10)));
+//			cv::dilate(src_gray, src_gray, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10)));
+//
+//			// morphological closing (fill small holes in the foreground)
+//			cv::dilate(src_gray, src_gray, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10)));
+//			cv::erode(src_gray, src_gray, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10)));
 
-			// morphological closing (fill small holes in the foreground)
-			cv::dilate(src_thresh, src_thresh, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10)));
-			cv::erode(src_thresh, src_thresh, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10)));
 
-			imshow("Thresh", src_thresh);
+//			imshow("Contours", src_gray);
 
+			x = 0;
+			y = 0;
 			calc_threshold(x, y);
 
 			if (tcp_server.get_ready()) {
@@ -164,22 +172,91 @@ int main(int, char**) {
 }
 
 /**
- * @function calc_threshold
+ * Helper function to find a cosine of angle between vectors from pt0->pt1 and pt0->pt2
+ */
+static double angle(cv::Point pt1, cv::Point pt2, cv::Point pt0) {
+	double dx1 = pt1.x - pt0.x;
+	double dy1 = pt1.y - pt0.y;
+	double dx2 = pt2.x - pt0.x;
+	double dy2 = pt2.y - pt0.y;
+	return (dx1 * dx2 + dy1 * dy2) / sqrt((dx1 * dx1 + dy1 * dy1) * (dx2 * dx2 + dy2 * dy2) + 1e-10);
+}
+
+/**
+ * \function calc_threshold
  */
 void calc_threshold(int& x, int& y) {
 	static std::vector<cv::Scalar> colors;
 	static int posX {0};
 	static int posY {0};
-	static cv::Mat movements {cv::Mat::zeros(src_thresh.size(), CV_8UC3)};
+	static cv::Mat movements {cv::Mat::zeros(src_gray.size(), CV_8UC3)};
 
 //	cv::Mat threshold_output;
 	std::vector<std::vector<cv::Point>> contours;
-	std::vector<cv::Vec4i> hierarchy;
+//	std::vector<cv::Vec4i> hierarchy;
 
 	// Find contours
 //	cv::findContours(threshold_output, contours, hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
-	cv::findContours(src_thresh, contours, hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
+	cv::findContours(src_gray, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
+	std::vector<std::vector<cv::Point>> approx(contours.size());
+//	std::vector<std::vector<cv::Point>> contours_poly(contours.size());
+	std::vector<cv::Rect> boundRect(contours.size());
+
+	for (size_t i(0); i < contours.size(); ++i) {
+		if (std::fabs(cv::contourArea(contours[i])) < 100) {
+			continue;
+		}
+
+		cv::approxPolyDP(cv::Mat(contours[i]), approx[i], cv::arcLength(cv::Mat(contours[i]), true) * 0.02, true);
+
+		if (! cv::isContourConvex(approx[i])) {
+			continue;
+		}
+
+//		std::cout << "approx[" << i << "].size()=" << approx[i].size() << std::endl;
+		boundRect[i] = cv::boundingRect(cv::Mat(approx[i]));
+
+		if (approx[i].size() == 3) {
+//			setLabel(dst, "TRI", contours[i]);
+		} else if (approx[i].size() >= 4 && approx[i].size() <= 7) {
+			const int vtc = approx[i].size();
+
+//			std::vector<double> cos;
+//
+//			for (int j(2); j < vtc + 1; ++j) {
+//				cos.push_back(angle(approx[i][j % vtc], approx[i][j - 2], approx[i][j - 1]));
+//			}
+//
+//			std::sort(cos.begin(), cos.end());
+//
+//			double mincos = cos.front();
+//			double maxcos = cos.back();
+
+			if (vtc == 4) {
+//				setLabel(dst, "RECT", contours[i]);
+			} else if (vtc == 5) {
+//				setLabel(dst, "PENTA", contours[i]);
+			} else if (vtc == 6) {
+//				setLabel(dst, "HEXA", contours[i]);
+			}
+		} else {
+#if 0
+			double area = cv::contourArea(contours[i]);
+			cv::Rect r = cv::boundingRect(contours[i]);
+
+			int radius = r.width / 2;
+
+			if (std::abs(1 - ((double) r.width / r.height)) <= 0.2 && std::abs(1 - (area / (CV_PI * (radius * radius)))) <= 0.2) {
+//				setLabel(dst, "CIR", contours[i]);
+			}
+#endif
+		}
+	}
+
+
+
+#if 0
 	// Approximate contours to polygons + get bounding rects and circles
 	std::vector<std::vector<cv::Point>> contours_poly(contours.size());
 	std::vector<cv::Rect> boundRect(contours.size());
@@ -187,49 +264,53 @@ void calc_threshold(int& x, int& y) {
 	std::vector<float> radius(contours.size());
 
 	for (size_t i(0); i < contours.size(); ++i) {
-		approxPolyDP(cv::Mat(contours[i]), contours_poly[i], 3, true);
-		boundRect[i] = boundingRect(cv::Mat(contours_poly[i]));
-		minEnclosingCircle(contours_poly[i], center[i], radius[i]);
+		cv::approxPolyDP(cv::Mat(contours[i]), contours_poly[i], 3, true);
+		boundRect[i] = cv::boundingRect(cv::Mat(contours_poly[i]));
+		cv::minEnclosingCircle(contours_poly[i], center[i], radius[i]);
 	}
+#endif
 
 	// Draw polygonal contour + bonding rects + circles
-	cv::Mat drawing(cv::Mat::zeros(src_thresh.size(), CV_8UC3));
+	cv::Mat drawing(cv::Mat::zeros(src_gray.size(), CV_8UC3));
+	cv::cvtColor(src_gray, drawing, CV_GRAY2RGB);
+
 	size_t j(0);
-	for (size_t i(0); i < contours.size(); ++i) {
-		if (boundRect[i].area() > 300) {
+	for (size_t i(0); i < boundRect.size(); ++i) {
+		if (boundRect[i].area() > 500 && std::abs(boundRect[i].width - boundRect[i].height) < 30) {
 //			std::cout << "boundRect[i].area()=" << boundRect[i].area() << "\n";
 			if (colors.size() <= j) {
 				colors.push_back(cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255)));
 			}
-			cv::drawContours(drawing, contours_poly, static_cast<int>(i), colors[j], 1, 8, std::vector<cv::Vec4i>(), 0, cv::Point());
+			cv::drawContours(drawing, approx, static_cast<int>(i), colors[j], 1, 8, std::vector<cv::Vec4i>(), 0, cv::Point());
 			cv::rectangle(drawing, boundRect[i].tl(), boundRect[i].br(), colors[j], 2, 8, 0);
-			cv::circle(drawing, center[i], static_cast<int>(radius[i]), colors[j], 2, 8, 0);
+//			cv::circle(drawing, center[i], static_cast<int>(radius[i]), colors[j], 2, 8, 0);
 			++j;
 		}
 	}
+
 	if (j) {
 		size_t max(0);
-		if (j > 1) {
-			for (auto i(0); i < boundRect.size(); ++i) {
-				if (boundRect[i].area() > boundRect[max].area()) {
-					max = i;
-				}
+		for (auto i(1); i < boundRect.size(); ++i) {
+			if (boundRect[i].area() > boundRect[max].area()) {
+				max = i;
 			}
 		}
 
+//		std::cout << "max=" << max << std::endl;
 		x = boundRect[max].x + boundRect[max].width / 2;
 		y = boundRect[max].y + boundRect[max].height / 2;
 
 		if (x > 0 && y > 0 && posX > 0 && posY > 0) {
 			// Draw a yellow line from the previous point to the current point
 			cv::line(movements, cv::Point(x, y), cvPoint(posX, posY), cv::Scalar(0, 255, 255), 3);
-			cv::add(drawing, movements, drawing);
 			std::cout << "x=" << x << "\ty=" << y << std::endl;
 		}
 
 		posX = x;
 		posY = y;
 	}
+
+	cv::add(drawing, movements, drawing);
 
 	// Show drawings in a window
 	cv::imshow("Contours", drawing);
