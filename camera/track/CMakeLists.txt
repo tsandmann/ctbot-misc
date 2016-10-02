@@ -6,7 +6,7 @@ set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -mtune=co
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 
 include_directories(${LOCAL_INCLUDE})
-link_directories(${LOCAL_LIB_QT} ${OPT_LIB})
+link_directories(${LOCAL_LIB_QT} ${LOCAL_SHARED_LIBS} ${OPT_LIB})
 
 set (raspicam_LIBS vcos mmal_vc_client mmal_components vchiq_arm vcsm containers mmal_core mmal_util mmal raspicam raspicam_cv)
 set (OpenCV_LIBS 

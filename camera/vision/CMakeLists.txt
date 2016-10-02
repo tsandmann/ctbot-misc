@@ -8,7 +8,7 @@ project (vision)
 #    MESSAGE(STATUS "COMPILING")
 
     include_directories(${LOCAL_INCLUDE})
-    link_directories(${OPT_LIB})
+    link_directories(${OPT_LIB} ${LOCAL_SHARED_LIBS})
     
     add_executable (vision src/vision.cpp)
     SET (raspicam_LIBS "vcos;mmal_vc_client;mmal_components;vchiq_arm;vcsm;containers;mmal_core;mmal_util;mmal;raspicam")

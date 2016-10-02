@@ -18,5 +18,6 @@ set(BOOST_ROOT "/usr/local/armv8l-unknown-linux-gnueabihf/armv8l-unknown-linux-g
 
 SET(LOCAL_INCLUDE "${CMAKE_SYSROOT}/usr/local/opencv_qt/include" "${CMAKE_SYSROOT}/usr/local/include")
 SET(LOCAL_LIB_QT "${CMAKE_SYSROOT}/usr/local/opencv_qt/lib")
+SET(LOCAL_SHARED_LIBS "${CMAKE_SYSROOT}/usr/local/share/OpenCV/3rdparty/lib")
 SET(OPT_LIB "${CMAKE_SYSROOT}/opt/vc/lib")
 

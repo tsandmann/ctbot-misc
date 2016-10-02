@@ -16,6 +16,7 @@ set(BOOST_ROOT "/usr/local/armv8l-unknown-linux-gnueabihf/armv8l-unknown-linux-g
 
 
 SET(LOCAL_INCLUDE "${CMAKE_SYSROOT}/usr/local/include")
+SET(LOCAL_SHARED_LIBS "${CMAKE_SYSROOT}/usr/local/share/OpenCV/3rdparty/lib")
 SET(OPT_LIB "${CMAKE_SYSROOT}/opt/vc/lib")
 
 set (RPI ON)
