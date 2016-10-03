@@ -13,6 +13,9 @@
 #include <cstdlib>
 
 
+#define TCP_SERVER
+
+
 static cv::Mat src, src_hsv, src_thresh;
 static cv::Mat src_gray;
 static constexpr int max_thresh {255};
@@ -42,31 +45,33 @@ int main(int, char**) {
 		return EXIT_FAILURE;
 	}
 
+#ifdef TCP_SERVER
 	std::cout << "Starting TCP server, waiting for connection..\n";
 	if (! tcp_server.init()) {
 		std::cerr << "Error init tcp server!\n";
 		return EXIT_FAILURE;
 	}
+#endif // TCP_SERVER
 
 	// Create Windows
 	cv::namedWindow("Source", cv::WINDOW_AUTOSIZE);
-	cv::namedWindow("Thresh", cv::WINDOW_AUTOSIZE);
+//	cv::namedWindow("Thresh", cv::WINDOW_AUTOSIZE);
 	cv::namedWindow("Contours", cv::WINDOW_AUTOSIZE);
 
 	cv::moveWindow("Source", 0, 0);
-	cv::moveWindow("Thresh", 650, 0);
-	cv::moveWindow("Contours", 1300, 0);
+//	cv::moveWindow("Thresh", 650, 0);
+	cv::moveWindow("Contours", 650, 0);
 
-	int thresh_h[] {90, 140};
-	int thresh_s[] {20, 200};
-	int thresh_v[] {180, 255};
-
-	cv::createTrackbar(" H min:", "Thresh", &thresh_h[0], max_thresh, nullptr);
-	cv::createTrackbar(" H max:", "Thresh", &thresh_h[1], max_thresh, nullptr);
-	cv::createTrackbar(" S min:", "Thresh", &thresh_s[0], max_thresh, nullptr);
-	cv::createTrackbar(" S max:", "Thresh", &thresh_s[1], max_thresh, nullptr);
-	cv::createTrackbar(" V min:", "Thresh", &thresh_v[0], max_thresh, nullptr);
-	cv::createTrackbar(" V max:", "Thresh", &thresh_v[1], max_thresh, nullptr);
+//	int thresh_h[] {90, 140};
+//	int thresh_s[] {20, 200};
+//	int thresh_v[] {180, 255};
+//
+//	cv::createTrackbar(" H min:", "Thresh", &thresh_h[0], max_thresh, nullptr);
+//	cv::createTrackbar(" H max:", "Thresh", &thresh_h[1], max_thresh, nullptr);
+//	cv::createTrackbar(" S min:", "Thresh", &thresh_s[0], max_thresh, nullptr);
+//	cv::createTrackbar(" S max:", "Thresh", &thresh_s[1], max_thresh, nullptr);
+//	cv::createTrackbar(" V min:", "Thresh", &thresh_v[0], max_thresh, nullptr);
+//	cv::createTrackbar(" V max:", "Thresh", &thresh_v[1], max_thresh, nullptr);
 
 	int x = 0, y = 0;
 
@@ -79,6 +84,7 @@ int main(int, char**) {
 
 	//		cv::cvtColor(src, src_gray, CV_BGR2GRAY);
 
+//			cv::imshow("Source", src);
 			cv::xphoto::balanceWhite(src, src, cv::xphoto::WHITE_BALANCE_SIMPLE);
 	//		cv::threshold(src, src, 128, 255, CV_THRESH_BINARY);
 
@@ -90,7 +96,7 @@ int main(int, char**) {
 //			cv::Mat lab;
 //			cv::cvtColor(src, lab, CV_RGB2Lab);
 
-			imshow("Source", src);
+			cv::imshow("Source", src);
 
 //			// Convert image to gray and blur it
 //			cv::cvtColor(src, src_gray, cv::COLOR_BGR2GRAY);
@@ -126,9 +132,9 @@ int main(int, char**) {
 //			cv::Mat image_clahe;
 //			cv::cvtColor(lab, image_clahe, CV_Lab2RGB);
 //
-//			imshow("Thresh", image_clahe);
+//			cv::imshow("Thresh", image_clahe);
 //			cv::cvtColor(image_clahe, src_hsv, CV_RGB2HSV);
-		//	imshow("Source", src_hsv);
+		//	cv::imshow("Source", src_hsv);
 
 
 			// Values 20,100,100 to 30,255,255 working perfect for yellow at around 6pm

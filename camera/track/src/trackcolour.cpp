@@ -107,6 +107,7 @@ int main() {
 
 		// Add the scribbling image and the frame... and we get a combination of the two
 		cvAdd(&frame, imgScribble, &frame);
+		cvCvtColor(&frame, &frame, CV_BGR2RGB);
 		cvShowImage("video", &frame);
 //		cvShowImage("video", imgScribble);
 		cvShowImage("thresh", imgYellowThresh);
