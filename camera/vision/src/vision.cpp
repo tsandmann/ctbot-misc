@@ -20,14 +20,14 @@ int main(int argc, char **argv) {
         return -1; 
     } 
     // Start capturing 
-//    cv::namedWindow("Display Window", cv::WINDOW_AUTOSIZE); 
+    cv::namedWindow("Display Window", cv::WINDOW_AUTOSIZE); 
     for (;;) { 
         Camera.grab(); 
         Camera.retrieve(frame); 
-//        cv::imshow("Display Window", frame); 
-//        if (cv::waitKey(1) > 0) {
-//            break;
-//        }
+        cv::imshow("Display Window", frame); 
+        if (cv::waitKey(1) > 0) {
+            break;
+        }
     }
     cout << "Stopping camera.." << endl;
     Camera.release();
