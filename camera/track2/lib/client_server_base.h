@@ -13,6 +13,8 @@
 #include <stdexcept>
 #include <streambuf>
 
+namespace tsio {
+
 /**
  * Interface class for clients and servers, provides send and receive operations
  */
@@ -21,10 +23,10 @@ protected:
 	bool ready;
 
 public:
-	ClientServerBase() : ready(false) {}
+	ClientServerBase() noexcept : ready(false) {}
 	virtual ~ClientServerBase() = default;
 
-	inline auto get_ready() const {
+	auto get_ready() const noexcept {
 		return ready;
 	}
 
@@ -48,5 +50,7 @@ class ClientServerEOF : public std::runtime_error {
 public:
 	ClientServerEOF(const std::string& what) : std::runtime_error(what) {}
 };
+
+} /* namespace tsio */
 
 #endif /* CLIENT_SERVER_BASE_H_ */

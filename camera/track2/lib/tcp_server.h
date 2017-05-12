@@ -1,6 +1,6 @@
-﻿/**
+/**
  * \file   tcp_server.h
- * \author Timo Sandmann (sandmann@kit.edu)
+ * \author Timo Sandmann
  * \date   22.07.2014
  * \brief  Sends and receives data over a TCP socket
  *
@@ -16,11 +16,16 @@
 #endif
 #include <boost/asio.hpp>
 #include "tcp_client_server.h"
+#include "logging.h"
+
+namespace tsio {
 
 /**
  * Tcp server based on boost::asio::ip::tcp, implements tcp send and receive operations of TCP_ClientServer
  */
 class TCP_Server : public TCP_ClientServer {
+	tslog::Log<tslog::L_DEBUG, true, false> logger;
+
 protected:
 	boost::asio::ip::tcp::acceptor acceptor;
 	const std::string port;
@@ -35,6 +40,18 @@ public:
 	virtual ~TCP_Server();
 
 	virtual bool init() override;
+
+	void abort() {
+#if 0
+		get_io_service().stop();
+#else
+		if (! ready) {
+			ready = true;
+		}
+#endif
+	}
 };
+
+} /* namespace tsio */
 
 #endif // TCP_SERVER_H_

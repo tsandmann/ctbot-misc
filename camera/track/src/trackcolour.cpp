@@ -1,14 +1,18 @@
 #include <raspicam/raspicam_cv.h>
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <QtCore/QtPlugin>
+Q_IMPORT_PLUGIN(QEglFSIntegrationPlugin)
+Q_IMPORT_PLUGIN(QEglFSBrcmIntegrationPlugin)
+
 
 IplImage* GetThresholdedImage(IplImage* img, const int* h_thresh, const int* s_thresh, const int* v_thresh) {
 	static IplImage* imgHSV = cvCreateImage(cvGetSize(img), 8, 3);
 	static IplImage* imgThreshed = cvCreateImage(cvGetSize(img), 8, 1);
-	
+
 	// Convert the image into an HSV image
 	cvCvtColor(img, imgHSV, CV_BGR2HSV);
-	
+
 //	cvShowImage("thresh", imgHSV);
 
 	// Values 20,100,100 to 30,255,255 working perfect for yellow at around 6pm
@@ -22,7 +26,7 @@ IplImage* GetThresholdedImage(IplImage* img, const int* h_thresh, const int* s_t
 int main() {
 	raspicam::RaspiCam_Cv Camera; // Camera Object
 	cv::Mat frame;
-		 
+
 	// Set camera params
 	Camera.set(CV_CAP_PROP_FORMAT, CV_8UC3); // For color
 	Camera.set(CV_CAP_PROP_FRAME_WIDTH, 640);
@@ -31,17 +35,17 @@ int main() {
 	// Open camera
     std::cout << "Opening camera...\n";
     if (! Camera.open()) {
-    	std::cerr << "Error opening camera!\n"; 
-    	return -1; 
+    	std::cerr << "Error opening camera!\n";
+    	return -1;
     }
-	
-	
+
+
 	// The two windows we'll be using
-    cvNamedWindow("video");
+  cvNamedWindow("video");
 	cvNamedWindow("thresh");
-	
+
 	cvMoveWindow("video", 0, 0);
-	cvMoveWindow("thresh", 650, 0);
+	cvMoveWindow("thresh", 240, 0);
 
 	int thresh_h[] {0, 18};
 	int thresh_s[] {160, 255};
@@ -57,7 +61,7 @@ int main() {
 
 	// This image holds the "scribble" data, the tracked positions of the ball
 	IplImage* imgScribble = NULL;
-	
+
 	cv::Mat frame_mat;
 
 	while (true) {
@@ -68,12 +72,12 @@ int main() {
 
 		// Will hold a frame captured from the camera
 		IplImage frame = frame_mat;
-		
+
 		// If this is the first frame, we need to initialize it
 		if (imgScribble == NULL) {
 			imgScribble = cvCreateImage(cvGetSize(&frame), 8, 3);
 		}
-		
+
 		// Holds the yellow thresholded image (yellow = white, rest = black)
 		IplImage* imgYellowThresh = GetThresholdedImage(&frame, thresh_h, thresh_s, thresh_v);
 
@@ -109,16 +113,16 @@ int main() {
 		cvAdd(&frame, imgScribble, &frame);
 		cvCvtColor(&frame, &frame, CV_BGR2RGB);
 		cvShowImage("video", &frame);
-//		cvShowImage("video", imgScribble);
+//	cvShowImage("video", imgScribble);
 		cvShowImage("thresh", imgYellowThresh);
 
 		// Wait for a keypress
 		int c = cvWaitKey(10);
 		if (c != -1) {
 			// If pressed, break out of the loop
-            break;
+      break;
 		}
-    }
+  }
 
-    return 0;
+  return 0;
 }

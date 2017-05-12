@@ -26,33 +26,23 @@ endif()
 set (CMAKE_SYSTEM_IDENTIFIER "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_BUILD_TYPE}")
 
 
-set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mtune=cortex-a53 -O3")
+set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mtune=cortex-a53 -O3 -flto")
 set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -mtune=cortex-a53 -O3")
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 
-set(BOOST_LIBS iostreams system) 
-set(BUILD_SHARED_LIBS OFF)
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_MULTITHREAD OFF)
-set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")
-    
+set (BOOST_LIBS iostreams system)
+set (BUILD_SHARED_LIBS OFF)
+set (Boost_USE_STATIC_LIBS ON)
+set (Boost_USE_MULTITHREAD OFF)
+#set (CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")
+
 find_package(Boost COMPONENTS ${BOOST_LIBS} REQUIRED)
 
-include_directories(${LOCAL_INCLUDE} lib ${Boost_INCLUDE_DIRS})
-link_directories(${LOCAL_LIB_QT} ${LOCAL_SHARED_LIBS} ${OPT_LIB})
+include_directories(${QT_INCLUDE} lib ${Boost_INCLUDE_DIRS})
+link_directories(${QT_LIB} ${SHARED_LIBS} ${VC_LIB})
 
-set (raspicam_LIBS vcos mmal_vc_client mmal_components vchiq_arm vcsm containers mmal_core mmal_util mmal raspicam raspicam_cv)
-set (OpenCV_LIBS 
-    opencv_videostab opencv_videoio opencv_video opencv_superres opencv_stitching opencv_shape opencv_photo opencv_objdetect opencv_ml
-    opencv_imgproc opencv_imgcodecs opencv_highgui opencv_flann opencv_features2d opencv_core opencv_calib3d opencv_imgproc opencv_xphoto
-)
-
-set (QT5_LIBS Qt5Core Qt5Widgets Qt5Gui Qt5Test Qt5OpenGL GL)
-set (OTHER_LIBS libjpeg libwebp libtiff libjasper IlmImf png z stdc++ dl m pthread rt)
-
-
-add_executable (trac2 src/contours.cpp)    
-target_link_libraries (trac2 ${CMAKE_SOURCE_DIR}/lib/libtstcp_${CMAKE_SYSTEM_IDENTIFIER}.a ${Boost_LIBRARIES} ${raspicam_LIBS} ${OpenCV_LIBS} ${QT5_LIBS} ${OTHER_LIBS})
+add_executable (trac2 src/contours.cpp)
+target_link_libraries (trac2 ${CMAKE_SOURCE_DIR}/lib/libtsio_${CMAKE_SYSTEM_IDENTIFIER}.a ${Boost_LIBRARIES} ${raspicam_LIBS} ${OpenCV_LIBS} ${QT5_LIBS})
 
 set_property(TARGET trac2 PROPERTY C_STANDARD 11)
 set_property(TARGET trac2 PROPERTY C_STANDARD_REQUIRED ON)

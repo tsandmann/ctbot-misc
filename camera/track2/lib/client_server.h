@@ -17,6 +17,8 @@
 #endif
 #include <boost/asio.hpp>
 
+namespace tsio {
+
 /**
  * Interface class for clients and servers based on boost::asio::io_service, provides send and receive operations
  */
@@ -28,11 +30,11 @@ public:
 	ClientServer() = default;
 	virtual ~ClientServer() = default;
 
-	inline auto& get_io_service() {
+	auto& get_io_service() noexcept {
 		return io_service;
  	}
 
-	virtual bool init() = 0;
+	virtual bool init() override = 0;
 	virtual std::size_t receive(void* data, const std::size_t size) override = 0;
 	virtual std::size_t receive(std::streambuf& buf, const std::size_t size) override = 0;
 	virtual std::size_t receive(boost::asio::streambuf::mutable_buffers_type& buf) = 0;
@@ -52,5 +54,7 @@ public:
 	virtual bool set_rcv_buffer_size(const int size) = 0;
 	virtual bool set_snd_buffer_size(const int size) = 0;
 };
+
+} /* namespace tsio */
 
 #endif /* CLIENT_SERVER_H_ */

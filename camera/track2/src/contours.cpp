@@ -9,8 +9,12 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/xphoto.hpp>
 #include <raspicam/raspicam_cv.h>
+#include <QtCore/QtPlugin>
 #include <iostream>
 #include <cstdlib>
+
+Q_IMPORT_PLUGIN(QEglFSIntegrationPlugin)
+Q_IMPORT_PLUGIN(QEglFSBrcmIntegrationPlugin)
 
 
 #define TCP_SERVER
@@ -28,7 +32,7 @@ void calc_threshold(int& x, int& y);
 
 
 int main(int, char**) {
-	TCP_Server tcp_server("10003", true);
+	tsio::TCP_Server tcp_server("10003", true);
 
 	raspicam::RaspiCam_Cv camera;
 	cv::Mat frame;
@@ -85,7 +89,8 @@ int main(int, char**) {
 	//		cv::cvtColor(src, src_gray, CV_BGR2GRAY);
 
 //			cv::imshow("Source", src);
-			cv::xphoto::balanceWhite(src, src, cv::xphoto::WHITE_BALANCE_SIMPLE);
+			auto wb { cv::xphoto::createSimpleWB() };
+			wb->balanceWhite(src, src);
 	//		cv::threshold(src, src, 128, 255, CV_THRESH_BINARY);
 
 			src.copyTo(src_gray);

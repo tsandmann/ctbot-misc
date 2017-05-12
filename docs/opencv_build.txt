@@ -7,16 +7,20 @@ X-Server:
 dnf install xorg-x11-xauth xorg-x11-fonts-* xorg-x11-utils
 
 
+
+*** CROSS-COMPILING ***
+
+OpenCV:
+mkdir build-opencv
+cd build-opencv
+cmake -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib-3.2.0/modules -DBUILD_SHARED_LIBS=OFF -DWITH_QT=ON -DWITH_QT_OPENGL=ON -DWITH_OPENGL=ON -DWITH_OPENCL=OFF -DBUILD_opencv_java=OFF -DBUILD_opencv_python2=OFF -DBUILD_opencv_python3=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_APPS=OFF -DENABLE_VFPV3=ON -DENABLE_NEON=ON -DCMAKE_TOOLCHAIN_FILE=../opencv-3.2.0/platforms/linux/arm-gnueabi.toolchain.cmake -DCMAKE_INSTALL_PREFIX=/usr/local/armv8l-unknown-linux-gnueabihf/armv8l-unknown-linux-gnueabihf/sysroot/usr ../opencv-3.2.0
+make
+make install
+
 Raspicam:
 cd raspicam
 mkdir build
 cd build
-cmake ..
-make
-make install
-ldconfig
-
-rm -rf ../build/*
-cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_UTILS=OFF ..
+cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_UTILS=OFF -DCMAKE_TOOLCHAIN_FILE=../armv8l-gnueabihf.toolchain.cmake -DCMAKE_INSTALL_PREFIX=/usr/local/armv8l-unknown-linux-gnueabihf/armv8l-unknown-linux-gnueabihf/sysroot/usr ..
 make
 make install
