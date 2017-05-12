@@ -1,2 +1,4 @@
 .DS_Store
-
+/camera/track/build-*
+/camera/track2/build-*
+/camera/vision/build-*

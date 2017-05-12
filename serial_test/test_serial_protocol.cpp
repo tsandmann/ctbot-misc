@@ -13,7 +13,7 @@
 #include <boost/asio/streambuf.hpp>
 
 
-//#define CRC_TEST
+#define CRC_TEST
 
 static boost::asio::streambuf recv_buffer;
 static std::streambuf& r_buffer(recv_buffer);

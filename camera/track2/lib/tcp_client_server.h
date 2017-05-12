@@ -17,6 +17,8 @@
 #endif
 #include <boost/asio.hpp>
 
+namespace tsio {
+
 /**
  * Interface class for tcp clients and servers based on boost::asio::ip::tcp, provides tcp send and receive operations
  */
@@ -55,5 +57,7 @@ public:
 	virtual bool set_rcv_buffer_size(const int size) override;
 	virtual bool set_snd_buffer_size(const int size) override;
 };
+
+} /* namespace tsio */
 
 #endif /* TCP_CLIENT_SERVER_H_ */
