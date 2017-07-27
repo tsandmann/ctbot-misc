@@ -14,7 +14,8 @@ Very basic test application for the c't-Bot serial protocol (serial-cmd). Consid
 #### Test run
 * create c't-Bot firmware
   * check out branch *serial-cmd*
-  * ensure that *BOT_2_RPI_AVAILABLE* is set
+  * ensure that ***BOT_2_RPI_AVAILABLE*** is set in ct-Bot.h
+  * set ***TEST_SERIAL*** in mcu/serial_protocol_handler.cpp
   * build for ATmega1284P and flash *ct-Bot.hex* to it
 * perform reset on ATmega (e.g. by pressing the reset button on the c't-Bot mainboard)
 * start test_serial on Raspberry Pi: <code>./test_serial</code>
