@@ -82,14 +82,20 @@
 			<resource resourceType="PROJECT" workspacePath="/serial_test"/>
 		</configuration>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		<scannerConfigBuildInfo instanceId="org.eclipse.linuxtools.cdt.autotools.core.toolChain.1172741814;org.eclipse.linuxtools.cdt.autotools.core.toolChain.1172741814.404320444;org.eclipse.linuxtools.cdt.autotools.core.toolchain.tool.gcc.1898610111;cdt.managedbuild.tool.gnu.c.compiler.input.1928421192">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.linuxtools.cdt.autotools.core.toolChain.1172741814.1616670627;org.eclipse.linuxtools.cdt.autotools.core.toolChain.1172741814.1616670627.;org.eclipse.linuxtools.cdt.autotools.core.toolchain.tool.gpp.1955734122;cdt.managedbuild.tool.gnu.cpp.compiler.input.1198029536">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="org.eclipse.linuxtools.cdt.autotools.core.toolChain.1172741814;org.eclipse.linuxtools.cdt.autotools.core.toolChain.1172741814.404320444;org.eclipse.linuxtools.cdt.autotools.core.toolchain.tool.gpp.149637754;cdt.managedbuild.tool.gnu.cpp.compiler.input.1192678544">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.linuxtools.cdt.autotools.core.toolChain.1172741814.1616670627;org.eclipse.linuxtools.cdt.autotools.core.toolChain.1172741814.1616670627.;org.eclipse.linuxtools.cdt.autotools.core.toolchain.tool.gcc.1456887646;cdt.managedbuild.tool.gnu.c.compiler.input.2127114414">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
 	</storageModule>
-	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>

@@ -1,8 +1,8 @@
-/*
- * serial_connection.h
- *
- *  Created on: 01.11.2014
- *      Author: ts
+/**
+ * \file   serial_connection.h
+ * \author Timo Sandmann
+ * \date   01.11.2014
+ * \brief  Sends and receives data over a serial connection
  */
 
 #ifndef SERIAL_CONNECTION_H_
@@ -33,6 +33,7 @@ public:
 	SerialConnection& operator=(const SerialConnection&) = delete;
 
 	virtual bool init() override;
+	virtual std::size_t available() override;
 	virtual std::size_t receive(void* data, const std::size_t size) override;
 	virtual std::size_t receive(std::streambuf& buf, const std::size_t size) override;
 	virtual std::size_t receive_until(void* data, const char delim, const std::size_t maxsize) override;

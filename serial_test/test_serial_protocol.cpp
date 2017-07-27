@@ -13,7 +13,7 @@
 #include <boost/asio/streambuf.hpp>
 
 
-#define CRC_TEST
+//#define CRC_TEST
 
 static boost::asio::streambuf recv_buffer;
 static std::streambuf& r_buffer(recv_buffer);
@@ -69,7 +69,7 @@ int main(int, char**) {
 	try {
 		tsio::SerialConnection ser_con("/dev/ttyAMA0", 500000);
 		ser_con.init();
-		ctbot::SerialProtocol serial_master(ser_con, 10, 1000);
+		ctbot::SerialProtocol serial_master(ser_con, 5, 100);
 
 		while (true) {
 			//std::shared_ptr<ctbot::CommandAct> p_recv_cmd;
@@ -92,23 +92,23 @@ int main(int, char**) {
 				recv_buffer.consume(static_cast<std::size_t>(r_buffer.in_avail()));
 				if (*p_recv_cmd != cmd) {
 					logger.error << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): received command different from sent one." << tslog::endlF;
-					logger.info << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): cmd.get_data()=" << cmd.get_data() << tslog::endl;
-					logger.info << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): p_recv_cmd.get_data()=" << p_recv_cmd->get_data() << tslog::endlF;
+					logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): cmd.get_data()=" << cmd.get_data() << tslog::endl;
+					logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): p_recv_cmd.get_data()=" << p_recv_cmd->get_data() << tslog::endlF;
 					break;
 				}
 //				std::this_thread::sleep_for(std::chrono::milliseconds(500));
 			}
 			auto end2(std::chrono::high_resolution_clock::now());
 			auto dt2 = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start).count());
-			logger.info << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): ping pong of " << i << " commands took " << dt2 << " ms (" << (i / (dt2 / 1000.)) << " cmds / s; "
+			logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): ping pong of " << i << " commands took " << dt2 << " ms (" << (i / (dt2 / 1000.)) << " cmds / s; "
 				<< (dt2 * 1000. / i) << " us / cmd)" << tslog::endl;
-			logger.info << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): crc errors: " << serial_master.get_crc_errors() << " resends: " << serial_master.get_resends() << tslog::endl;
-			logger.info << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): p_recv_cmd.get_data()=" << p_recv_cmd->get_data() << tslog::endlF;
-			logger.debug << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): r_buffer.in_avail()=" << r_buffer.in_avail() << tslog::endlF;
+			logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): crc errors: " << serial_master.get_crc_errors() << " resends: " << serial_master.get_resends() << tslog::endl;
+			logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): p_recv_cmd.get_data()=" << p_recv_cmd->get_data() << tslog::endlF;
+			logger.debug << tslog::lock << TSLOG_FUNCTION(logger.debug) << "(): r_buffer.in_avail()=" << r_buffer.in_avail() << tslog::endlF;
 		}
 
 	} catch (const std::exception& e) {
-		logger.error << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): Execption: \"" << e.what() << "\"" << tslog::endlF;
+		logger.error << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): Exception: \"" << e.what() << "\"" << tslog::endlF;
 		return 1;
 	}
 

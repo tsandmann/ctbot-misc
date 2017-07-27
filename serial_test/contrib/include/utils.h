@@ -1,8 +1,8 @@
-/*
- * utils.h
- *
- *  Created on: 24.07.2016
- *      Author: ts
+/**
+ * \file   utils.h
+ * \author Timo Sandmann
+ * \date   06.11.2014
+ * \brief  Helper functions for logging framework
  */
 
 #ifndef MAKE_ARRAY_H_

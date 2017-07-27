@@ -23,7 +23,7 @@ protected:
 	bool ready;
 
 public:
-	ClientServerBase() : ready(false) {}
+	ClientServerBase() noexcept : ready(false) {}
 	virtual ~ClientServerBase() = default;
 
 	auto get_ready() const noexcept {
@@ -31,6 +31,7 @@ public:
 	}
 
 	virtual bool init() = 0;
+	virtual std::size_t available() = 0;
 	virtual std::size_t receive(void* data, const std::size_t size) = 0;
 	virtual std::size_t receive(std::streambuf& buf, const std::size_t size) = 0;
 	virtual std::size_t receive_until(void* data, const char delim, const std::size_t maxsize) = 0;
