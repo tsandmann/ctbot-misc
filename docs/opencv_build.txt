@@ -10,6 +10,33 @@ dnf install xorg-x11-xauth xorg-x11-fonts-* xorg-x11-utils
 
 *** CROSS-COMPILING ***
 
+OpenSSL:
+tar xvzf openssl-1.0.2k.tar.gz
+cd openssl-1.0.2k 
+./Configure linux-generic32 no-shared --prefix=/usr/local/armv8l-unknown-linux-gnueabihf/armv8l-unknown-linux-gnueabihf/sysroot/usr --openssldir=/usr/local/armv8l-unknown-linux-gnueabihf/armv8l-unknown-linux-gnueabihf/sysroot/etc/openssl --cross-compile-prefix=/usr/local/armv8l-unknown-linux-gnueabihf/bin/armv8l-unknown-linux-gnueabihf-
+make depend
+make
+make install
+
+Qt5.8:
+git clone git://code.qt.io/qt/qt5.git
+cd qt5
+./init-repository
+cd qtbase
+patch -p1 < qtbase.patch
+cd ..
+rm -rf qtwebkit
+rm -rf qtwebkit-examples
+rm -rf qtscript
+./configure -opengl es2 -device linux-rpi3-g++ -device-option CROSS_COMPILE=/usr/local/armv8l-unknown-linux-gnueabihf/bin/armv8l-unknown-linux-gnueabihf- -sysroot /usr/local/armv8l-unknown-linux-gnueabihf/armv8l-unknown-linux-gnueabihf/sysroot -opensource -confirm-license -reduce-exports -release -make libs -prefix /usr -extprefix /usr/local/armv8l-unknown-linux-gnueabihf/qt5-rpi -hostprefix /usr/local/armv8l-unknown-linux-gnueabihf/qt5 -make tools -static -nomake examples -no-compile-examples -skip qtwayland -skip qtwebkit -skip qtscript
+make -j8
+make install -j4
+find /usr/local/armv8l-unknown-linux-gnueabihf/qt5-rpi -type f -name *.prl -exec gsed -i 's|-L=/usr/local/armv8l-unknown-linux-gnueabihf|-L/usr/local/armv8l-unknown-linux-gnueabihf|g' {} +
+find /usr/local/armv8l-unknown-linux-gnueabihf/qt5-rpi -type f -name *.pc -exec gsed -i 's|-L=/usr/local/armv8l-unknown-linux-gnueabihf|-L/usr/local/armv8l-unknown-linux-gnueabihf|g' {} +
+find /usr/local/armv8l-unknown-linux-gnueabihf/qt5-rpi -type f -name *.la -exec gsed -i 's|-L=/usr/local/armv8l-unknown-linux-gnueabihf|-L/usr/local/armv8l-unknown-linux-gnueabihf|g' {} +
+
+
+
 OpenCV:
 mkdir build-opencv
 cd build-opencv
