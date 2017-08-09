@@ -111,6 +111,7 @@
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="macOS+Linux"/>
 		<configuration configurationName="rpi2">
 			<resource resourceType="PROJECT" workspacePath="/serial_test"/>
 		</configuration>
