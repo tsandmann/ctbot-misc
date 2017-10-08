@@ -88,7 +88,7 @@ public:
 	}
 
 protected:
-	tslog::Log<tslog::L_OFF, true, false> logger;
+	tslog::Log<tslog::L_INFO, true, false> logger;
 	tsio::ClientServerBase& con;
 	const uint32_t receive_timeout_ms;
 	const uint32_t retries;

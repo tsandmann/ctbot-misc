@@ -1,8 +1,8 @@
-/*
- * serial_protocol_clock.h
- *
- *  Created on: 26.12.2016
- *      Author: ts
+/**
+ * \file   serial_protocol_clock.h
+ * \author Timo Sandmann
+ * \date   26.12.2016
+ * \brief  Clock source for \see SerialProtocol
  */
 
 #ifndef SERIAL_PROTOCOL_CLOCK_H_

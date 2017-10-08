@@ -36,7 +36,7 @@ target_link_libraries (test_serial tsio_${CMAKE_SYSTEM_IDENTIFIER})
 set_property (TARGET test_serial PROPERTY CXX_STANDARD 14)
 set_property (TARGET test_serial PROPERTY CXX_STANDARD_REQUIRED ON)
 
-set (BOOST_LIBS iostreams system)
+set (BOOST_LIBS iostreams program_options system)
 if (${RPI} MATCHES ON)
 # Raspberry Pi
     message ("Configured for Raspberry Pi")

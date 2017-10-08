@@ -1,115 +1,117 @@
-/*
- * test_serial_protocol.cpp
- *
- *  Created on: 26.12.2016
- *      Author: ts
+/**
+ * \file   test_serial_protocol.cpp
+ * \author Timo Sandmann
+ * \date   26.12.2016
+ * \brief  Simple test application for \see SerialProtocol
  */
 
 #include "logging.h"
 #include "serial_connection.h"
 #include "serial_protocol.h"
 #include "ll_command.h"
-#include "crc_engine.h"
+#include <atomic>
+#include <chrono>
+#include <thread>
+#include <csignal>
+#include <iomanip>
 #include <boost/asio/streambuf.hpp>
+#include <boost/program_options.hpp>
 
 
-//#define CRC_TEST
+static std::atomic<bool> g_stop { false };
 
-static boost::asio::streambuf recv_buffer;
-static std::streambuf& r_buffer(recv_buffer);
-
-
-template <typename T>
-static T crc_xmodem_update(T crc, uint8_t data) {
-    crc = crc ^ (static_cast<T>(data) << 8);
-    for (auto i(0); i < 8; ++i) {
-    	if (crc & 0x8000) {
-        	crc = (crc << 1) ^ 0x1021;
-        } else {
-        	crc <<= 1;
-        }
-    }
-
-    return crc;
-}
-
-template <typename T>
-static T process_bytes(const void* buffer, std::size_t byte_count) {
-	T value(-1);
-	const uint8_t* ptr(reinterpret_cast<const uint8_t*>(buffer));
-	for (auto i(0U); i < byte_count; ++i, ++ptr) {
-		value = static_cast<T>(crc_xmodem_update(value, *ptr));
+static void sig_handler(int sig) {
+	if (sig == SIGINT) {
+		g_stop = true;
 	}
-	return value;
 }
 
 
-int main(int, char**) {
-	tslog::Log<tslog::L_INFO, true, false> logger;
+static std::shared_ptr<boost::program_options::variables_map> parse_options(int argc, char** argv) {
+	static tslog::Log<tslog::L_INFO, true, false> logger;
+	/* declare the supported program options */
+	boost::program_options::options_description desc("allowed options");
+	desc.add_options()
+		("help,h", "help message")
+		("uart,u", boost::program_options::value<std::string>()->value_name("UART")->default_value("/dev/ttyAMA0"), "UART device for connection to ATmega")
+		("baudrate,b", boost::program_options::value<uint32_t>()->value_name("BAUDRATE")->default_value(115200), "UART baudrate for connection to ATmega")
+		("retries,x", boost::program_options::value<uint32_t>()->value_name("RETRIES")->default_value(5), "Maximum number of transmission retries for connection to ATmega")
+		("timeout,t", boost::program_options::value<uint32_t>()->value_name("TIMEOUT")->default_value(100), "Timeout in ms for connection to ATmega")
+		("resetpin,r", boost::program_options::value<int>()->value_name("RESET_PIN")->default_value(17), "reset pin for ATmega (not yet implemented!)")
+		;
 
-#ifdef CRC_TEST
-	ctbot::crc_data crc16_1, crc16_2;
-
-	ctbot::CommandLcd cmd({15, 1, 1, "Hello World! Hello!"});
-	uint32_t tmp {0x70563412};
-
-	crc16_1.process_bytes(&tmp, sizeof(tmp));
-	logger.info << tslog::lock << "main: crc16_1=0x" << std::hex << static_cast<uint16_t>(crc16_1.checksum()) << std::dec << tslog::endlF;
-
-	crc16_2.process_bytes(&cmd, sizeof(cmd));
-	logger.info << tslog::lock << "main: crc16_2 of cmd: 0x" << std::hex << static_cast<uint16_t>(crc16_2.checksum()) << std::dec << tslog::endlF;
-
-	const auto crc16_avr(process_bytes<uint16_t>(&tmp, sizeof(tmp)));
-	logger.info << tslog::lock << "main: crc16_avr=0x" << std::hex << crc16_avr << std::dec << tslog::endlF;
-
-	const auto crc16_2_avr(process_bytes<uint16_t>(&cmd, sizeof(cmd)));
-	logger.info << tslog::lock << "main: crc16_2_avr of cmd: 0x" << std::hex << crc16_2_avr << std::dec << tslog::endlF;
-#endif // CRC_TEST
-
+	/* parse program options */
+	auto p_options(std::make_shared<boost::program_options::variables_map>());
 	try {
-		tsio::SerialConnection ser_con("/dev/ttyAMA0", 500000);
-		ser_con.init();
-		ctbot::SerialProtocol serial_master(ser_con, 5, 100);
+		boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), *p_options);
+		boost::program_options::notify(*p_options);
+	} catch (const std::exception& e) {
+		logger.error << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): Exception: " << e.what() << tslog::endl;
+		logger.info << tslog::lock << desc << tslog::endl;
+		return nullptr;
+	}
 
-		while (true) {
-			//std::shared_ptr<ctbot::CommandAct> p_recv_cmd;
-			//std::shared_ptr<ctbot::CommandSens> p_recv_cmd;
-			std::shared_ptr<ctbot::CommandLcd> p_recv_cmd;
-			auto start(std::chrono::high_resolution_clock::now());
-			auto i(0);
-			//ctbot::CommandAct cmd({300, -300, ctbot::CommandAct::Type::SERVO_LEFT, ctbot::CommandAct::Type::SERVO_OFF});
-			//ctbot::CommandSens cmd({300, -300, 50, true, false, true, 7, 200, 100, 200, 100, 200, 100, 200, 100});
-			ctbot::CommandLcd cmd({15, 1, 1, "Hello World! Hello!"});
-			for (i = 0; i < 1000; ++i) {
+	if (p_options->count("help")) {
+		std::cout << desc << "\n";
+		return nullptr;
+	}
+
+	return p_options;
+}
+
+
+int main(int argc, char** argv) {
+	tslog::Log<tslog::L_DEBUG, true, false> logger;
+
+	const auto p_options(parse_options(argc, argv));
+	if (! p_options) {
+		return 0;
+	}
+
+	std::signal(SIGINT, sig_handler);
+
+	tsio::SerialConnection ser_con { (*p_options)["uart"].as<std::string>(), (*p_options)["baudrate"].as<uint32_t>() };
+	ser_con.init();
+	ctbot::SerialProtocol serial_master { ser_con, (*p_options)["retries"].as<uint32_t>(), (*p_options)["timeout"].as<uint32_t>() };
+
+	uint32_t n_cycles { 0U };
+	while (! g_stop) {
+		const auto start(std::chrono::high_resolution_clock::now());
+		auto i(0);
+		for (i = 0; ! g_stop && i < 1000; ++i, ++n_cycles) {
+			try {
+				boost::asio::streambuf recv_buffer;
+				auto p_recv_cmd(std::make_shared<ctbot::CommandSens>(recv_buffer, serial_master));
+				logger.fine << tslog::lock << TSLOG_FUNCTION(logger.fine) << "(): received cmd=" << *p_recv_cmd << tslog::endl;
+			} catch (const std::exception& e) {
+				logger.error << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): receiving of CommandSens failed: \"" << e.what() << "\"" << tslog::endlF;
+				break;
+			}
+
+			{
+				//ctbot::CommandAct cmd({ static_cast<int16_t>(i), static_cast<int16_t>(-i), static_cast<uint8_t>(i % 250), static_cast<uint8_t>((1000 - i) % 250), 0, false });
+				ctbot::CommandAct cmd({ 0, 0, 0, 0, static_cast<uint8_t>(1 << ((i / 30) % 8)), false });
+				logger.fine << tslog::lock << TSLOG_FUNCTION(logger.fine) << "(): actuator cmd=" << cmd << tslog::endl;
+
 				if (! cmd.send(serial_master)) {
-					logger.error << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): cmd.send(serial_master) failed." << tslog::endlF;
-					continue;
-				}
-//				std::this_thread::sleep_for(std::chrono::milliseconds(500));
-			//	p_recv_cmd = std::make_shared<ctbot::CommandAct>(r_buffer, serial_master);
-			//	p_recv_cmd = std::make_shared<ctbot::CommandSens>(r_buffer, serial_master);
-				p_recv_cmd = std::make_shared<ctbot::CommandLcd>(r_buffer, serial_master);
-				recv_buffer.consume(static_cast<std::size_t>(r_buffer.in_avail()));
-				if (*p_recv_cmd != cmd) {
-					logger.error << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): received command different from sent one." << tslog::endlF;
-					logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): cmd.get_data()=" << cmd.get_data() << tslog::endl;
-					logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): p_recv_cmd.get_data()=" << p_recv_cmd->get_data() << tslog::endlF;
+					logger.error << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): sending of CommandAct failed." << tslog::endlF;
 					break;
 				}
-//				std::this_thread::sleep_for(std::chrono::milliseconds(500));
 			}
-			auto end2(std::chrono::high_resolution_clock::now());
-			auto dt2 = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start).count());
-			logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): ping pong of " << i << " commands took " << dt2 << " ms (" << (i / (dt2 / 1000.)) << " cmds / s; "
-				<< (dt2 * 1000. / i) << " us / cmd)" << tslog::endl;
-			logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): crc errors: " << serial_master.get_crc_errors() << " resends: " << serial_master.get_resends() << tslog::endl;
-			logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): p_recv_cmd.get_data()=" << p_recv_cmd->get_data() << tslog::endlF;
-			logger.debug << tslog::lock << TSLOG_FUNCTION(logger.debug) << "(): r_buffer.in_avail()=" << r_buffer.in_avail() << tslog::endlF;
-		}
 
-	} catch (const std::exception& e) {
-		logger.error << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): Exception: \"" << e.what() << "\"" << tslog::endlF;
-		return 1;
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+		const auto end(std::chrono::high_resolution_clock::now());
+		const auto dt = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+
+		logger.info << tslog::lock << tslog::endl;
+		logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): transmission of last " << i << " command cycles took " << std::setprecision(0) << dt / 1000.f << " ms (" << (i / (dt / 1000000.f))
+			<< " cycles/s; " << (static_cast<float>(dt) / i) << " us/cycle)" << tslog::endl;
+
+		const auto crc_errors { serial_master.get_crc_errors() };
+		const auto resends { serial_master.get_resends() };
+		logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): cycles in total: " << n_cycles << "\tcrc errors: " << crc_errors << " (" << std::setprecision(4) << std::fixed
+			<< crc_errors * 100.f / n_cycles	<< "%) \tresends: " << resends << " (" << resends * 100.f / n_cycles << "%).\n" << tslog::endlF;
 	}
 
 	return 0;

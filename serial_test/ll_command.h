@@ -150,7 +150,7 @@ public:
 		door(door_), error (error_), transport(transport_), ir_l(ir_l_ & 0x3ff), ir_r(ir_r_ & 0x3ff), border_l(border_l_ & 0x3ff), border_r(border_r_ & 0x3ff),
 		line_l(line_l_ & 0x3ff), line_r(line_r_ & 0x3ff), ldr_l(ldr_l_ & 0x3ff), ldr_r(ldr_r_ & 0x3ff) {}
 
-	friend std::ostream& operator <<(std::ostream& os, const ctbot::LLCommandSens& v);
+	friend std::ostream& operator <<(std::ostream& os, const LLCommand<LLCommandSens>& v);
 
 }
 #ifdef _MSC_VER
@@ -229,7 +229,7 @@ public:
 	LLCommandAct(int16_t motor_l_, int16_t motor_r_, uint8_t servo1_, uint8_t servo2_, uint8_t leds_, bool shutdown_) noexcept : type(1), motor_l(motor_l_ & 0x3ff),
 		motor_r(motor_r_ & 0x3ff), servo1(servo1_), servo2(servo2_), leds(leds_), shutdown(shutdown_), reserved(0) {}
 
-	friend std::ostream& operator <<(std::ostream& os, const ctbot::LLCommandAct& v);
+	friend std::ostream& operator <<(std::ostream& os, const LLCommand<LLCommandAct>& v);
 
 }
 #ifdef _MSC_VER
@@ -283,7 +283,7 @@ public:
 		std::strncpy(line, text.c_str(), sizeof(line));
 	}
 
-	friend std::ostream& operator <<(std::ostream& os, const ctbot::LLCommandLcd& v);
+	friend std::ostream& operator <<(std::ostream& os, const LLCommand<LLCommandLcd>& v);
 
 }
 #ifdef _MSC_VER

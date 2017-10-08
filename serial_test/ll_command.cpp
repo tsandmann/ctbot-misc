@@ -28,31 +28,31 @@ LLCommand<TYPE>::LLCommand(const char* buf) noexcept {
 	std::memcpy(&data, buf, sizeof(TYPE));
 }
 
-std::ostream& operator <<(std::ostream& os, const LLCommandSens& v) {
+std::ostream& operator <<(std::ostream& os, const LLCommand<LLCommandSens>& v) {
 	os << std::boolalpha << "\n";
-	os << " type=" << static_cast<uint16_t>(v.get_type()) << "\n";
-	os << " enc_l=" << v.get_enc_l() << " enc_r=" << v.get_enc_r() << "\n";
-	os << " ir_l=" << v.get_ir_l() << " ir_r=" << v.get_ir_r() << "\n";
-	os << " border_l=" << v.get_border_l() << " border_r=" << v.get_border_r() << "\n";
-	os << " line_l=" << v.get_line_l() << " line_r=" << v.get_line_r() << "\n";
-	os << " ldr_l=" << v.get_ldr_l() << " ldr_r=" << v.get_ldr_r() << "\n";
-	os << " rc5=" << v.get_rc5() << " bps=" << static_cast<uint16_t>(v.get_bps()) << "\n";
-	os << " door=" << v.get_door() << " error=" << v.get_error() << " transport=" << v.get_transport();
+	os << " type=" << static_cast<uint16_t>(v.get_data().get_type()) << "\n";
+	os << " enc_l=" << v.get_data().get_enc_l() << " enc_r=" << v.get_data().get_enc_r() << "\n";
+	os << " ir_l=" << v.get_data().get_ir_l() << " ir_r=" << v.get_data().get_ir_r() << "\n";
+	os << " border_l=" << v.get_data().get_border_l() << " border_r=" << v.get_data().get_border_r() << "\n";
+	os << " line_l=" << v.get_data().get_line_l() << " line_r=" << v.get_data().get_line_r() << "\n";
+	os << " ldr_l=" << v.get_data().get_ldr_l() << " ldr_r=" << v.get_data().get_ldr_r() << "\n";
+	os << " rc5=" << v.get_data().get_rc5() << " bps=" << static_cast<uint16_t>(v.get_data().get_bps()) << "\n";
+	os << " door=" << v.get_data().get_door() << " error=" << v.get_data().get_error() << " transport=" << v.get_data().get_transport();
 	return os;
 }
 
-std::ostream& operator <<(std::ostream& os, const LLCommandAct& v) {
-	os << "\n type=" << static_cast<uint16_t>(v.get_type()) << "\n";
-	os << " motor_l=" << v.get_motor_l() << " motor_r=" << v.get_motor_r() << "\n";
-	os << " servo1=" << static_cast<uint16_t>(v.get_servo1()) << " servo2=" << static_cast<uint16_t>(v.get_servo2()) << "\n";
-	os << " leds=" << static_cast<uint16_t>(v.get_leds()) << " shutdown=" << v.get_shutdown();
+std::ostream& operator <<(std::ostream& os, const LLCommand<LLCommandAct>& v) {
+	os << "\n type=" << static_cast<uint16_t>(v.get_data().get_type()) << "\n";
+	os << " motor_l=" << v.get_data().get_motor_l() << " motor_r=" << v.get_data().get_motor_r() << "\n";
+	os << " servo1=" << static_cast<uint16_t>(v.get_data().get_servo1()) << " servo2=" << static_cast<uint16_t>(v.get_data().get_servo2()) << "\n";
+	os << " leds=" << static_cast<uint16_t>(v.get_data().get_leds()) << " shutdown=" << v.get_data().get_shutdown();
 	return os;
 }
 
-std::ostream& operator <<(std::ostream& os, const LLCommandLcd& v) {
-	os << "\n type=" << static_cast<uint16_t>(v.get_type()) << "\n";
-	os << " ctrl=" << static_cast<uint16_t>(v.get_ctrl()) << "\n";
-	os << " text=\"" << v.get_text() << "\"";
+std::ostream& operator <<(std::ostream& os, const LLCommand<LLCommandLcd>& v) {
+	os << "\n type=" << static_cast<uint16_t>(v.get_data().get_type()) << "\n";
+	os << " ctrl=" << static_cast<uint16_t>(v.get_data().get_ctrl()) << "\n";
+	os << " text=\"" << v.get_data().get_text() << "\"";
 	return os;
 }
 

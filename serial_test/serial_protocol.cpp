@@ -85,9 +85,9 @@ bool SerialProtocol::send_data(const void* data, const uint16_t size) const {
 
 	crc_data crc16;
 	crc16.process_bytes(data, size);
-	const uint16_t crc_data(crc16.checksum());
+	const uint16_t crc_checksum(crc16.checksum());
 
-	if (con.send(&crc_data, sizeof(crc_data)) != sizeof(crc_data)) {
+	if (con.send(&crc_checksum, sizeof(crc_checksum)) != sizeof(crc_checksum)) {
 		logger.error << tslog::lock << "SerialProtocol::send_data(): send for crc of data on connection failed, abort." << tslog::endl;
 		return false;
 	}
@@ -107,8 +107,8 @@ bool SerialProtocol::send_data(std::streambuf& buf, const uint16_t size) const {
 		return false;
 	}
 
-	const uint16_t crc_data(crc16.checksum());
-	if (con.send(&crc_data, sizeof(crc_data)) != sizeof(crc_data)) {
+	const uint16_t crc_checksum(crc16.checksum());
+	if (con.send(&crc_checksum, sizeof(crc_checksum)) != sizeof(crc_checksum)) {
 		logger.error << tslog::lock << "SerialProtocol::send_data(): send for crc of data on connection failed, abort." << tslog::endl;
 		return false;
 	}
@@ -245,6 +245,10 @@ std::size_t SerialProtocol::master_receive(T& data, const std::size_t size, cons
 
 				header head_nack {STARTBYTE, static_cast<uint8_t>(sequence_number), static_cast<uint8_t>(header_types::NACK), 0, 0, 0};
 				send_header(head_nack);
+
+				++sequence_number;
+				sequence_number %= max_seq_no + 1;
+
 				continue;
 			}
 
@@ -267,6 +271,10 @@ std::size_t SerialProtocol::master_receive(T& data, const std::size_t size, cons
 
 					header head_nack {STARTBYTE, static_cast<uint8_t>(sequence_number), static_cast<uint8_t>(header_types::NACK), 0, 0, 0};
 					send_header(head_nack);
+
+					++sequence_number;
+					sequence_number %= max_seq_no + 1;
+
 					continue;
 				}
 
@@ -286,10 +294,16 @@ std::size_t SerialProtocol::master_receive(T& data, const std::size_t size, cons
 			} else if (static_cast<header_types>(head.type) != header_types::ACK) {
 				/* NACK from sender, rerequest */
 				logger.debug << tslog::lock << "SerialProtocol::master_receive(): invalid type of received packet (==" << static_cast<uint16_t>(head.type) << ")." << tslog::endl;
+
+				++sequence_number;
+				sequence_number %= max_seq_no + 1;
 			} else if (head.seq != sequence_number) {
 				/* wrong seq. no. of received ACK, rerequest */
 				logger.debug << tslog::lock << "SerialProtocol::master_receive(): invalid sequence no. of received packet: " << static_cast<uint16_t>(head.seq) << " should be "
 					<< sequence_number << tslog::endl;
+
+				++sequence_number;
+				sequence_number %= max_seq_no + 1;
 			}
 		}
 	}
@@ -348,10 +362,17 @@ std::size_t SerialProtocol::master_send(T& data, const std::size_t size, const u
 				} else {
 					logger.debug << tslog::lock << "SerialProtocol::master_send(): invalid type of ack packet (==" << static_cast<uint16_t>(head.type) << ")." << tslog::endl;
 				}
+
+				++sequence_number;
+				sequence_number %= max_seq_no + 1;
 			} else if (head.seq != sequence_number) {
 				/* wrong seq. no. of received ACK, resend */
+/** \todo: is resend best solution here?? */
 				logger.debug << tslog::lock << "SerialProtocol::master_send(): invalid sequence no. of ack packet: " << static_cast<uint16_t>(head.seq) << " should be "
 					<< sequence_number << tslog::endl;
+
+				++sequence_number;
+				sequence_number %= max_seq_no + 1;
 			}
 		}
 	}
@@ -425,8 +446,8 @@ int SerialProtocol::slave_process_request(header& head, T& buf, const std::size_
 		const uint16_t length(std::min<uint16_t>(head.length, static_cast<uint16_t>(size)));
 		logger.debug << tslog::lock << "SerialProtocol::slave_process_request(): got REQUEST request, sending " << length << " byte of data to master..." << tslog::endl;
 
-		header head {STARTBYTE, static_cast<uint8_t>(seq), static_cast<uint8_t>(header_types::ACK), 0, static_cast<uint16_t>(length & max_size), 0};
-		send_header(head);
+		header response_header {STARTBYTE, static_cast<uint8_t>(seq), static_cast<uint8_t>(header_types::ACK), 0, static_cast<uint16_t>(length & max_size), 0};
+		send_header(response_header);
 
 		if (length) {
 			/* send data and CRC16 */
