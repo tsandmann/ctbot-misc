@@ -5,21 +5,18 @@
  * \brief  Low level command interface between ATmega and RPi.
  *
  * Efficient communication protocol for data exchange between ATmega and RPi.
- * Sends / receives with SerialProtocol (see serial_protocol.h).
  */
 
 #ifndef LL_COMMAND_H_
 #define LL_COMMAND_H_
 
-#include "serial_protocol.h"
+#include "spi_endpoint.h"
 #include <cstdint>
 #include <string>
 #include <ostream>
 #include <memory>
-#include <streambuf>
 
 namespace ctbot {
-
 
 template <class TYPE>
 class LLCommand {
@@ -31,28 +28,41 @@ protected:
 public:
 	using Type = TYPE;
 
-	LLCommand(std::streambuf& buf, SerialProtocol& protocol);
-	LLCommand(const char* buf) noexcept;
+	LLCommand(const char *buf) noexcept;
 
-	LLCommand(const TYPE& cmd_data) noexcept : data(cmd_data) {}
+	LLCommand(const TYPE &cmd_data) noexcept : data(cmd_data) {}
 
-	bool send(SerialProtocol& protocol) {
-		const char* ptr(reinterpret_cast<const char*>(&data));
-		return protocol.master_send(ptr, sizeof(TYPE), data.type) == sizeof(TYPE);
-	}
-
-	const TYPE& get_data() const noexcept {
+	const TYPE &get_data() const noexcept {
 		return data;
 	}
 
-	bool operator==(const LLCommand& b) noexcept {
+	uint8_t get_type() const noexcept {
+		return data.get_type();
+	}
+
+	bool operator==(const LLCommand &b) noexcept {
 	    return std::memcmp(&get_data(), &b.get_data(), sizeof(TYPE)) == 0;
 	}
 
-	bool operator!=(const LLCommand& b) noexcept {
+	bool operator!=(const LLCommand &b) noexcept {
 	    return ! operator ==(b);
 	}
 };
+
+class LLCommandBase {
+protected:
+	uint8_t type:4;
+
+	LLCommandBase() noexcept = delete;
+	friend class LLCommand<LLCommandBase>;
+
+public:
+	uint8_t get_type() const noexcept {
+		return type;
+	}
+
+	friend std::ostream& operator <<(std::ostream &os, const LLCommand<LLCommandBase> &v);
+} __attribute__((packed));
 
 
 #ifdef _MSC_VER
@@ -61,26 +71,30 @@ public:
 class LLCommandSens {
 protected:
 	uint8_t type:4;
-	uint8_t bps:4;
-	int16_t enc_l;
-	int16_t enc_r;
-	uint16_t rc5:13;
-	uint8_t door:1;
-	uint8_t error:1;
-	uint8_t transport:1;
-	uint16_t ir_l:10;
-	uint16_t ir_r:10;
-	uint16_t border_l:10;
-	uint16_t border_r:10;
-	uint16_t line_l:10;
-	uint16_t line_r:10;
-	uint16_t ldr_l:10;
-	uint16_t ldr_r:10;
+	uint8_t bps:4;			// H
+	int16_t enc_l;			// H
+	int16_t enc_r;			// H
+	uint16_t rc5:13;		// L
+	uint8_t door:1;			// L
+	uint8_t error:1;		// L
+	uint8_t transport:1;	// L
+	uint16_t ir_l:10;		// L
+	uint16_t ir_r:10;		// L
+	uint16_t border_l:10;	// H
+	uint16_t border_r:10;	// H
+	uint16_t line_l:10;		// H
+	uint16_t line_r:10;		// H
+	uint16_t ldr_l:10;		// L
+	uint16_t ldr_r:10;		// L
+	uint32_t time;			// L
+	/* 21 byte */ // 10 byte H + 12 byte L + CRC16 -> 14 byte
 
-	LLCommandSens() noexcept : type(0) {}
+	LLCommandSens() noexcept : type(TYPE_ID) {}
 	friend class LLCommand<LLCommandSens>;
 
 public:
+	static constexpr uint8_t TYPE_ID { 0 };
+
 	uint8_t get_type() const noexcept {
 		return type;
 	}
@@ -145,12 +159,16 @@ public:
 		return ldr_r;
 	}
 
-	LLCommandSens(int16_t enc_l_, int16_t enc_r_, uint16_t rc5_, bool door_, bool error_, bool transport_, uint8_t bps_, uint16_t ir_l_, uint16_t ir_r_, uint16_t border_l_,
-		uint16_t border_r_, uint16_t line_l_, uint16_t line_r_, uint16_t ldr_l_, uint16_t ldr_r_) noexcept : type(0), bps(bps_ & 0xf), enc_l(enc_l_), enc_r(enc_r_), rc5(rc5_ & 0x103f),
-		door(door_), error (error_), transport(transport_), ir_l(ir_l_ & 0x3ff), ir_r(ir_r_ & 0x3ff), border_l(border_l_ & 0x3ff), border_r(border_r_ & 0x3ff),
-		line_l(line_l_ & 0x3ff), line_r(line_r_ & 0x3ff), ldr_l(ldr_l_ & 0x3ff), ldr_r(ldr_r_ & 0x3ff) {}
+	uint32_t get_time() const noexcept {
+		return time;
+	}
 
-	friend std::ostream& operator <<(std::ostream& os, const LLCommand<LLCommandSens>& v);
+	LLCommandSens(int16_t enc_l_, int16_t enc_r_, uint16_t rc5_, bool door_, bool error_, bool transport_, uint8_t bps_, uint16_t ir_l_, uint16_t ir_r_, uint16_t border_l_,
+		uint16_t border_r_, uint16_t line_l_, uint16_t line_r_, uint16_t ldr_l_, uint16_t ldr_r_, uint32_t time_) noexcept : type(0), bps(bps_ & 0xf), enc_l(enc_l_), enc_r(enc_r_),
+		rc5(rc5_ & 0x103f), door(door_), error (error_), transport(transport_), ir_l(ir_l_ & 0x3ff), ir_r(ir_r_ & 0x3ff), border_l(border_l_ & 0x3ff), border_r(border_r_ & 0x3ff),
+		line_l(line_l_ & 0x3ff), line_r(line_r_ & 0x3ff), ldr_l(ldr_l_ & 0x3ff), ldr_r(ldr_r_ & 0x3ff), time(time_) {}
+
+	friend std::ostream& operator <<(std::ostream &os, const LLCommand<LLCommandSens> &v);
 
 }
 #ifdef _MSC_VER
@@ -173,16 +191,19 @@ protected:
 	uint8_t servo1;
 	uint8_t servo2;
 	uint8_t leds;
+	uint32_t time;
 	uint8_t shutdown:1;
-	uint8_t reserved:3;
+	uint8_t reserved:7;
+	/* 11 byte */ // 11 byte + CRC16 -> 13 byte
 
-	LLCommandAct() noexcept : type(1) {}
+	LLCommandAct() noexcept : type(TYPE_ID) {}
 	friend class LLCommand<LLCommandAct>;
 
 public:
-	static constexpr uint8_t SERVO_OFF = 0;
-	static constexpr uint8_t SERVO_LEFT = 1;
-	static constexpr uint8_t SERVO_RIGHT = 2;
+	static constexpr uint8_t TYPE_ID { 1 };
+	static constexpr uint8_t SERVO_OFF { 0 };
+	static constexpr uint8_t SERVO_LEFT { 1 };
+	static constexpr uint8_t SERVO_RIGHT { 2 };
 
 	uint8_t get_type() const noexcept {
 		return type;
@@ -222,14 +243,18 @@ public:
 		return leds;
 	}
 
+	uint32_t get_time() const noexcept {
+		return time;
+	}
+
 	bool get_shutdown() const noexcept {
 		return shutdown;
 	}
 
-	LLCommandAct(int16_t motor_l_, int16_t motor_r_, uint8_t servo1_, uint8_t servo2_, uint8_t leds_, bool shutdown_) noexcept : type(1), motor_l(motor_l_ & 0x3ff),
-		motor_r(motor_r_ & 0x3ff), servo1(servo1_), servo2(servo2_), leds(leds_), shutdown(shutdown_), reserved(0) {}
+	LLCommandAct(int16_t motor_l_, int16_t motor_r_, uint8_t servo1_, uint8_t servo2_, uint8_t leds_, uint32_t time_, bool shutdown_) noexcept : type(1), motor_l(motor_l_ & 0x3ff),
+		motor_r(motor_r_ & 0x3ff), servo1(servo1_), servo2(servo2_), leds(leds_), time(time_), shutdown(shutdown_), reserved(0) {}
 
-	friend std::ostream& operator <<(std::ostream& os, const LLCommand<LLCommandAct>& v);
+	friend std::ostream& operator <<(std::ostream &os, const LLCommand<LLCommandAct> &v);
 
 }
 #ifdef _MSC_VER
@@ -246,6 +271,7 @@ __attribute__((packed));
 #endif
 class LLCommandLcd {
 public:
+	static constexpr uint8_t TYPE_ID { 2 };
 	static constexpr uint8_t LINE_SIZE = 20;
 
 protected:
@@ -254,8 +280,9 @@ protected:
 	uint8_t cursor_r:3;
 	uint8_t cursor_c:5;
 	char line[LINE_SIZE];
+	/* 22 byte */ // 22 byte + CRC16 -> 24 byte
 
-	LLCommandLcd() noexcept : type(2) {};
+	LLCommandLcd() noexcept : type(TYPE_ID) {};
 	friend class LLCommand<LLCommandLcd>;
 
 public:
@@ -283,7 +310,7 @@ public:
 		std::strncpy(line, text.c_str(), sizeof(line));
 	}
 
-	friend std::ostream& operator <<(std::ostream& os, const LLCommand<LLCommandLcd>& v);
+	friend std::ostream &operator <<(std::ostream& os, const LLCommand<LLCommandLcd> &v);
 
 }
 #ifdef _MSC_VER
@@ -296,6 +323,7 @@ __attribute__((packed));
 #endif
 
 
+using CommandBase = LLCommand<LLCommandBase>;
 using CommandSens = LLCommand<LLCommandSens>;
 using CommandAct = LLCommand<LLCommandAct>;
 using CommandLcd = LLCommand<LLCommandLcd>;

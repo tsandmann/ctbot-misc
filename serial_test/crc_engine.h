@@ -35,6 +35,8 @@ protected:
 	SizeType value;
 
 public:
+	using SizeT = SizeType;
+
 	CrcEngine(SizeType init_rem = InitRem) noexcept : value(init_rem) {}
 
 	void process_byte(uint8_t byte) noexcept {

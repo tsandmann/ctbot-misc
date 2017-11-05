@@ -2,20 +2,25 @@
  * \file   test_serial_protocol.cpp
  * \author Timo Sandmann
  * \date   26.12.2016
- * \brief  Simple test application for \see SerialProtocol
+ * \brief  Simple test application for SPI connection between Raspberry Pi and ATmega
  */
 
 #include "logging.h"
-#include "serial_connection.h"
-#include "serial_protocol.h"
+#include "spi_endpoint.h"
 #include "ll_command.h"
+#include "crc_engine.h"
 #include <atomic>
 #include <chrono>
 #include <thread>
 #include <csignal>
 #include <iomanip>
-#include <boost/asio/streambuf.hpp>
 #include <boost/program_options.hpp>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/min.hpp>
+#include <boost/accumulators/statistics/max.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/variance.hpp>
 
 
 static std::atomic<bool> g_stop { false };
@@ -26,18 +31,15 @@ static void sig_handler(int sig) {
 	}
 }
 
-
 static std::shared_ptr<boost::program_options::variables_map> parse_options(int argc, char** argv) {
 	static tslog::Log<tslog::L_INFO, true, false> logger;
 	/* declare the supported program options */
 	boost::program_options::options_description desc("allowed options");
 	desc.add_options()
 		("help,h", "help message")
-		("uart,u", boost::program_options::value<std::string>()->value_name("UART")->default_value("/dev/ttyAMA0"), "UART device for connection to ATmega")
-		("baudrate,b", boost::program_options::value<uint32_t>()->value_name("BAUDRATE")->default_value(115200), "UART baudrate for connection to ATmega")
-		("retries,x", boost::program_options::value<uint32_t>()->value_name("RETRIES")->default_value(5), "Maximum number of transmission retries for connection to ATmega")
-		("timeout,t", boost::program_options::value<uint32_t>()->value_name("TIMEOUT")->default_value(100), "Timeout in ms for connection to ATmega")
-		("resetpin,r", boost::program_options::value<int>()->value_name("RESET_PIN")->default_value(17), "reset pin for ATmega (not yet implemented!)")
+		("device,d", boost::program_options::value<std::string>()->value_name("SPI DEVICE")->default_value("/dev/spidev0.1"), "SPI device for connection to ATmega")
+		("speed,s", boost::program_options::value<uint32_t>()->value_name("SPI SPEED")->default_value(1000000UL), "SPI speed in Hz")
+		("resetpin,r", boost::program_options::value<int>()->value_name("RESET_PIN")->default_value(17), "reset pin for ATmega (not implemented)")
 		;
 
 	/* parse program options */
@@ -59,9 +61,8 @@ static std::shared_ptr<boost::program_options::variables_map> parse_options(int 
 	return p_options;
 }
 
-
 int main(int argc, char** argv) {
-	tslog::Log<tslog::L_DEBUG, true, false> logger;
+	tslog::Log<tslog::L_DEBUG, false, false> logger;
 
 	const auto p_options(parse_options(argc, argv));
 	if (! p_options) {
@@ -70,48 +71,74 @@ int main(int argc, char** argv) {
 
 	std::signal(SIGINT, sig_handler);
 
-	tsio::SerialConnection ser_con { (*p_options)["uart"].as<std::string>(), (*p_options)["baudrate"].as<uint32_t>() };
-	ser_con.init();
-	ctbot::SerialProtocol serial_master { ser_con, (*p_options)["retries"].as<uint32_t>(), (*p_options)["timeout"].as<uint32_t>() };
+	SpiEndpoint con { (*p_options)["device"].as<std::string>(), SpiEndpoint::MODE_0, (*p_options)["speed"].as<uint32_t>(), 8, 0, 0 } ;
 
 	uint32_t n_cycles { 0U };
+	uint32_t crc_errors { 0U };
+	uint8_t rx_buffer[64];
+	uint8_t tx_buffer[64];
+	boost::accumulators::accumulator_set<uint32_t, boost::accumulators::features<boost::accumulators::tag::min, boost::accumulators::tag::max, boost::accumulators::tag::mean,
+		boost::accumulators::tag::variance> > tx_time;
+	constexpr size_t tx_size { std::max(sizeof(ctbot::CommandSens), sizeof(ctbot::CommandAct)) + sizeof(ctbot::crc_data::SizeT) };
 	while (! g_stop) {
 		const auto start(std::chrono::high_resolution_clock::now());
 		auto i(0);
 		for (i = 0; ! g_stop && i < 1000; ++i, ++n_cycles) {
-			try {
-				boost::asio::streambuf recv_buffer;
-				auto p_recv_cmd(std::make_shared<ctbot::CommandSens>(recv_buffer, serial_master));
-				logger.fine << tslog::lock << TSLOG_FUNCTION(logger.fine) << "(): received cmd=" << *p_recv_cmd << tslog::endl;
-			} catch (const std::exception& e) {
-				logger.error << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): receiving of CommandSens failed: \"" << e.what() << "\"" << tslog::endlF;
+			ctbot::CommandAct cmd({ 0, 0, 0, 0, static_cast<uint8_t>(1 << ((i / 30) % 8)), static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::high_resolution_clock::now().time_since_epoch()).count()), false });
+			logger.fine << tslog::lock << TSLOG_FUNCTION(logger.fine) << "(): actuator cmd=" << cmd << tslog::endl;
+			std::memcpy(tx_buffer, &cmd, sizeof(cmd));
+			ctbot::crc_data tx_crc16;
+			tx_crc16.process_bytes(tx_buffer, sizeof(cmd));
+			auto crc_ptr { reinterpret_cast<uint16_t *>(&tx_buffer[sizeof(cmd)]) };
+			*crc_ptr = tx_crc16.checksum();
+
+			const auto tx_start(std::chrono::high_resolution_clock::now());
+			con.transfer(rx_buffer, tx_buffer, tx_size);
+			const auto tx_end(std::chrono::high_resolution_clock::now());
+			const auto tx_dt = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::microseconds>(tx_end - tx_start).count());
+			tx_time(tx_dt);
+
+			auto p_cmd(reinterpret_cast<const ctbot::CommandBase*>(rx_buffer));
+			ctbot::crc_data crc16;
+			switch (p_cmd->get_type()) {
+			case ctbot::CommandSens::Type::TYPE_ID: {
+				auto ptr(reinterpret_cast<const ctbot::CommandSens*>(rx_buffer));
+				crc16.process_bytes(ptr, sizeof(ctbot::CommandSens));
+				auto p_crc16(reinterpret_cast<const uint16_t *>(&rx_buffer[sizeof(ctbot::CommandSens)]));
+				if (*p_crc16 == crc16.checksum()) {
+					if (i == 999) {
+//						uint32_t time { ptr->get_data().get_time() };
+//						logger.debug << tslog::lock << TSLOG_FUNCTION(logger.debug) << "(): received Sense cmd: time=" << time << " us." << tslog::endl;
+						logger.debug << tslog::lock << TSLOG_FUNCTION(logger.debug) << "(): received Sense cmd=" << *ptr << tslog::endlF;
+					}
+					logger.fine << tslog::lock << TSLOG_FUNCTION(logger.fine) << "(): received Sense cmd=" << *ptr << tslog::endlF;
+				} else {
+					logger.error << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): invalid CRC16 of Sense cmd=" << *ptr << tslog::endlF;
+					++crc_errors;
+				}
 				break;
 			}
 
-			{
-				//ctbot::CommandAct cmd({ static_cast<int16_t>(i), static_cast<int16_t>(-i), static_cast<uint8_t>(i % 250), static_cast<uint8_t>((1000 - i) % 250), 0, false });
-				ctbot::CommandAct cmd({ 0, 0, 0, 0, static_cast<uint8_t>(1 << ((i / 30) % 8)), false });
-				logger.fine << tslog::lock << TSLOG_FUNCTION(logger.fine) << "(): actuator cmd=" << cmd << tslog::endl;
-
-				if (! cmd.send(serial_master)) {
-					logger.error << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): sending of CommandAct failed." << tslog::endlF;
-					break;
-				}
+			default:
+				logger.error << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): unknown cmd received" << tslog::endlF;
+				break;
 			}
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 		}
 		const auto end(std::chrono::high_resolution_clock::now());
 		const auto dt = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
 
 		logger.info << tslog::lock << tslog::endl;
-		logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): transmission of last " << i << " command cycles took " << std::setprecision(0) << dt / 1000.f << " ms (" << (i / (dt / 1000000.f))
-			<< " cycles/s; " << (static_cast<float>(dt) / i) << " us/cycle)" << tslog::endl;
-
-		const auto crc_errors { serial_master.get_crc_errors() };
-		const auto resends { serial_master.get_resends() };
+		logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): transmission of last " << i << " command cycles took " << std::setprecision(0) << dt / 1000.f << " ms ("
+			<< (i / (dt / 1000000.f)) << " cycles/s; " << (static_cast<float>(dt) / i) << " us/cycle)" << tslog::endl;
+		logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): SPI transmission time: min=" << boost::accumulators::min(tx_time) << " us, max=" << boost::accumulators::max(tx_time)
+			<< " us, mean=" << boost::accumulators::mean(tx_time) << " us, s=" << std::sqrt(boost::accumulators::variance(tx_time)) << " us." << tslog::endl;
+		logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): -> effective average SPI data rate: " << (1000000.f * 8.f / 1000.f) / (boost::accumulators::mean(tx_time) / tx_size)
+			<< " kBit/s." << tslog::endl;
 		logger.info << tslog::lock << TSLOG_FUNCTION(logger.info) << "(): cycles in total: " << n_cycles << "\tcrc errors: " << crc_errors << " (" << std::setprecision(4) << std::fixed
-			<< crc_errors * 100.f / n_cycles	<< "%) \tresends: " << resends << " (" << resends * 100.f / n_cycles << "%).\n" << tslog::endlF;
+			<< crc_errors * 100.f / n_cycles	<< "%)\n" << tslog::endlF;
 	}
 
 	return 0;

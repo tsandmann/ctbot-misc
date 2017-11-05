@@ -33,7 +33,7 @@ static void pabort(const char *s)
 static const char *device = "/dev/spidev0.1";
 static uint32_t mode;
 static uint8_t bits = 8;
-static uint32_t speed = 500000;
+static uint32_t speed = 10000;
 static uint16_t delay;
 static int verbose;
 
@@ -260,41 +260,48 @@ int main(int argc, char *argv[])
 	parse_opts(argc, argv);
 
 	fd = open(device, O_RDWR);
-	if (fd < 0)
+	if (fd < 0) {
 		pabort("can't open device");
+	}
 
 	/*
 	 * spi mode
 	 */
 	ret = ioctl(fd, SPI_IOC_WR_MODE32, &mode);
-	if (ret == -1)
+	if (ret == -1) {
 		pabort("can't set spi mode");
+	}
 
 	ret = ioctl(fd, SPI_IOC_RD_MODE32, &mode);
-	if (ret == -1)
+	if (ret == -1) {
 		pabort("can't get spi mode");
+	}
 
 	/*
 	 * bits per word
 	 */
 	ret = ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
-	if (ret == -1)
+	if (ret == -1) {
 		pabort("can't set bits per word");
+	}
 
 	ret = ioctl(fd, SPI_IOC_RD_BITS_PER_WORD, &bits);
-	if (ret == -1)
+	if (ret == -1) {
 		pabort("can't get bits per word");
+	}
 
 	/*
 	 * max speed hz
 	 */
 	ret = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
-	if (ret == -1)
+	if (ret == -1) {
 		pabort("can't set max speed hz");
+	}
 
 	ret = ioctl(fd, SPI_IOC_RD_MAX_SPEED_HZ, &speed);
-	if (ret == -1)
+	if (ret == -1) {
 		pabort("can't get max speed hz");
+	}
 
 	printf("spi mode: 0x%x\n", mode);
 	printf("bits per word: %d\n", bits);
@@ -308,6 +315,8 @@ int main(int argc, char *argv[])
 		transfer(fd, tx, rx, size);
 		free(rx);
 		free(tx);
+
+		transfer(fd, default_tx, default_rx, 6);
 	} else {
 		transfer(fd, default_tx, default_rx, sizeof(default_tx));
 	}

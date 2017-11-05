@@ -24,7 +24,6 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}/contrib/include)
 
 set (SOURCES
 	ll_command.cpp
-	serial_protocol.cpp
 	test_serial_protocol.cpp
 )
 
