@@ -10,8 +10,8 @@
 #ifndef LL_COMMAND_H_
 #define LL_COMMAND_H_
 
-#include "spi_endpoint.h"
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <ostream>
 #include <memory>

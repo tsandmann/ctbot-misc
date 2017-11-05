@@ -15,7 +15,7 @@ LLCommand<TYPE>::LLCommand(const char *buf) noexcept {
 }
 
 std::ostream& operator <<(std::ostream &os, const LLCommand<LLCommandSens> &v) {
-	auto data { v.get_data() };
+	const auto data(v.get_data());
 	os << std::boolalpha << "\n";
 	os << " type=" << static_cast<uint16_t>(v.get_type()) << "\n";
 	os << " enc_l=" << data.get_enc_l() << " enc_r=" << data.get_enc_r() << "\n";
@@ -30,7 +30,7 @@ std::ostream& operator <<(std::ostream &os, const LLCommand<LLCommandSens> &v) {
 }
 
 std::ostream& operator <<(std::ostream &os, const LLCommand<LLCommandAct> &v) {
-	auto data { v.get_data() };
+	const auto data(v.get_data());
 	os << "\n type=" << static_cast<uint16_t>(v.get_type()) << "\n";
 	os << " motor_l=" << data.get_motor_l() << " motor_r=" << data.get_motor_r() << "\n";
 	os << " servo1=" << static_cast<uint16_t>(data.get_servo1()) << " servo2=" << static_cast<uint16_t>(data.get_servo2()) << "\n";
@@ -39,7 +39,7 @@ std::ostream& operator <<(std::ostream &os, const LLCommand<LLCommandAct> &v) {
 }
 
 std::ostream& operator <<(std::ostream &os, const LLCommand<LLCommandLcd> &v) {
-	auto data { v.get_data() };
+	const auto data(v.get_data());
 	os << "\n type=" << static_cast<uint16_t>(v.get_type()) << "\n";
 	os << " ctrl=" << static_cast<uint16_t>(data.get_ctrl()) << "\n";
 	os << " text=\"" << data.get_text() << "\"";
