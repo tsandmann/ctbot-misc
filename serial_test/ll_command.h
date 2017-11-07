@@ -27,6 +27,7 @@ protected:
 
 public:
 	using Type = TYPE;
+	static constexpr size_t SIZE { sizeof(TYPE) };
 
 	LLCommand(const char *buf) noexcept;
 

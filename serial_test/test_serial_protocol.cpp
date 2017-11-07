@@ -72,14 +72,15 @@ int main(int argc, char** argv) {
 	std::signal(SIGINT, sig_handler);
 
 	SpiEndpoint con { (*p_options)["device"].as<std::string>(), SpiEndpoint::MODE_0, (*p_options)["speed"].as<uint32_t>(), 8, 0, 0 } ;
+	constexpr size_t tx_size { std::max(ctbot::CommandSens::SIZE, ctbot::CommandAct::SIZE) + sizeof(ctbot::crc_data::SizeT) };
 
 	uint32_t n_cycles { 0U };
 	uint32_t crc_errors { 0U };
-	uint8_t rx_buffer[64];
-	uint8_t tx_buffer[64];
+	uint8_t rx_buffer[tx_size + 2];
+	uint8_t tx_buffer[tx_size + 2];
 	boost::accumulators::accumulator_set<uint32_t, boost::accumulators::features<boost::accumulators::tag::min, boost::accumulators::tag::max, boost::accumulators::tag::mean,
 		boost::accumulators::tag::variance> > tx_time;
-	constexpr size_t tx_size { std::max(sizeof(ctbot::CommandSens), sizeof(ctbot::CommandAct)) + sizeof(ctbot::crc_data::SizeT) };
+	logger.debug << tslog::lock << TSLOG_FUNCTION(logger.debug) << "(): tx_size=" << tx_size << tslog::endlF;
 	while (! g_stop) {
 		const auto start(std::chrono::high_resolution_clock::now());
 		auto i(0);
@@ -87,17 +88,24 @@ int main(int argc, char** argv) {
 			ctbot::CommandAct cmd({ 0, 0, 0, 0, static_cast<uint8_t>(1 << ((i / 30) % 8)), static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::microseconds>(
 				std::chrono::high_resolution_clock::now().time_since_epoch()).count()), false });
 			logger.fine << tslog::lock << TSLOG_FUNCTION(logger.fine) << "(): actuator cmd=" << cmd << tslog::endl;
-			std::memcpy(tx_buffer, &cmd, sizeof(cmd));
+			tx_buffer[0] = static_cast<uint8_t>(tx_size);
+			std::memcpy(&tx_buffer[1], &cmd.get_data(), cmd.SIZE);
 			ctbot::crc_data tx_crc16;
-			tx_crc16.process_bytes(tx_buffer, sizeof(cmd));
-			auto crc_ptr { reinterpret_cast<uint16_t *>(&tx_buffer[sizeof(cmd)]) };
+			tx_crc16.process_bytes(&cmd.get_data(), cmd.SIZE);
+			auto crc_ptr { reinterpret_cast<uint16_t *>(&tx_buffer[cmd.SIZE + 1]) };
 			*crc_ptr = tx_crc16.checksum();
 
 			const auto tx_start(std::chrono::high_resolution_clock::now());
-			con.transfer(rx_buffer, tx_buffer, tx_size);
+			con.transfer(rx_buffer, tx_buffer, tx_size + 1);
 			const auto tx_end(std::chrono::high_resolution_clock::now());
 			const auto tx_dt = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::microseconds>(tx_end - tx_start).count());
 			tx_time(tx_dt);
+
+			logger.fine << tslog::lock << TSLOG_FUNCTION(logger.fine) << "(): rx_buffer:" << std::hex;
+			for (auto i(0U); i < tx_size; ++i) {
+				logger.fine << "0x" << static_cast<uint16_t>(rx_buffer[i]) << " ";
+			}
+			logger.fine << tslog::endlF;
 
 			auto p_cmd(reinterpret_cast<const ctbot::CommandBase*>(rx_buffer));
 			ctbot::crc_data crc16;
@@ -105,7 +113,7 @@ int main(int argc, char** argv) {
 			case ctbot::CommandSens::Type::TYPE_ID: {
 				auto ptr(reinterpret_cast<const ctbot::CommandSens*>(rx_buffer));
 				crc16.process_bytes(ptr, sizeof(ctbot::CommandSens));
-				auto p_crc16(reinterpret_cast<const uint16_t *>(&rx_buffer[sizeof(ctbot::CommandSens)]));
+				auto p_crc16(reinterpret_cast<const uint16_t *>(&rx_buffer[ctbot::CommandSens::SIZE]));
 				if (*p_crc16 == crc16.checksum()) {
 					if (i == 999) {
 //						uint32_t time { ptr->get_data().get_time() };
