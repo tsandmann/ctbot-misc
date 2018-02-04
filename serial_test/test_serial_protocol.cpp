@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
 		const auto start(std::chrono::high_resolution_clock::now());
 		auto i(0);
 		for (i = 0; ! g_stop && i < 1000; ++i, ++n_cycles) {
-			ctbot::CommandAct cmd({ 0, 0, 0, 0, static_cast<uint8_t>(1 << ((i / 30) % 8)), static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::microseconds>(
+			ctbot::CommandAct cmd({ 0, 0, 0, 0, static_cast<uint8_t>(1 << ((i / 20) % 8)), static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::microseconds>(
 				std::chrono::high_resolution_clock::now().time_since_epoch()).count()), false });
 			logger.fine << tslog::lock << TSLOG_FUNCTION(logger.fine) << "(): actuator cmd=" << cmd << tslog::endl;
 			tx_buffer[0] = static_cast<uint8_t>(tx_size);
@@ -107,13 +107,13 @@ int main(int argc, char** argv) {
 			}
 			logger.fine << tslog::endlF;
 
-			auto p_cmd(reinterpret_cast<const ctbot::CommandBase*>(rx_buffer));
+			auto p_cmd(reinterpret_cast<const ctbot::CommandBase *>(&rx_buffer[1]));
 			ctbot::crc_data crc16;
 			switch (p_cmd->get_type()) {
 			case ctbot::CommandSens::Type::TYPE_ID: {
-				auto ptr(reinterpret_cast<const ctbot::CommandSens*>(rx_buffer));
+				auto ptr(reinterpret_cast<const ctbot::CommandSens *>(&rx_buffer[1]));
 				crc16.process_bytes(ptr, sizeof(ctbot::CommandSens));
-				auto p_crc16(reinterpret_cast<const uint16_t *>(&rx_buffer[ctbot::CommandSens::SIZE]));
+				auto p_crc16(reinterpret_cast<const uint16_t *>(&rx_buffer[ctbot::CommandSens::SIZE] + 1));
 				if (*p_crc16 == crc16.checksum()) {
 					if (i == 999) {
 //						uint32_t time { ptr->get_data().get_time() };
@@ -130,10 +130,11 @@ int main(int argc, char** argv) {
 
 			default:
 				logger.error << tslog::lock << TSLOG_FUNCTION(logger.error) << "(): unknown cmd received" << tslog::endlF;
+				++crc_errors;
 				break;
 			}
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
 		const auto end(std::chrono::high_resolution_clock::now());
 		const auto dt = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
