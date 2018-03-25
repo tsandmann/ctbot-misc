@@ -29,15 +29,18 @@ void setup() {
 
     Serial.begin(4000000UL);
 
-    Wire.setSDA(17);
-    Wire.setSCL(16);
+    Wire2.setSDA(3);
+    Wire2.setSCL(4);
 
-    bool ret = pcf_01.begin(0x20);
+    bool ret;
+#if 0
+    ret = pcf_01.begin(0x20);
     pcf_01.portMode(OUTPUT); // Set the entire IO extender to OUTPUT
     Serial.print("Init LED(0x20)=");
     Serial.println(ret);
 
     pcf_01.write(0); // all off
+#endif
 
     ret = lcd.begin(20, 4);
     Serial.print("Init LCD(0x3f)=");
@@ -48,6 +51,7 @@ void setup() {
 
     Serial.println("initialization done.");
 
+#if 0
     pcf_01.digitalWrite(2, HIGH);
 
     // analogWriteFrequency(29, 14648);
@@ -76,12 +80,19 @@ void setup() {
             digitalWriteFast(26, HIGH);
         }, RISING
     );
+#endif
 }
 
 
 void loop() {
-#if 0
+    Serial.println("ON");
     digitalWrite(LED_BUILTIN, HIGH);
+    delay(250);
+    Serial.println("OFF");
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(250);
+
+#if 0
 
     pcf_01.digitalWrite(0, HIGH);
     pcf_01.digitalWrite(1, HIGH);
@@ -94,6 +105,7 @@ void loop() {
     pcf_01.digitalWrite(1, LOW);
 
     delay(250);
+#endif
 
     lcd.home();
     lcd.print("Hello World!");
@@ -102,6 +114,7 @@ void loop() {
     lcd.print(millis());
     lcd.print(" ms");
 
+#if 0
     static uint8_t run = 0;
     if (run == 5) {
         lcd.setBacklight(HIGH);
@@ -148,6 +161,7 @@ void loop() {
     // delay(stop_time_ms);
 #endif
 
+#if 0
     int val = analogRead(14);
     val = map(val, 0, 1023, 0, 179);
     Serial.print("val=");
@@ -161,4 +175,5 @@ void loop() {
     // _delay_us(1);
     // digitalWriteFast(26, LOW);
     foo();
+#endif
 }

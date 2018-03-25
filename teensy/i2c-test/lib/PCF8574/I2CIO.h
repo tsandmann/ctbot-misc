@@ -31,6 +31,8 @@
 
 #define _I2CIO_VERSION "1.0.0"
 
+class TwoWire;
+
 /*!
  @class
  @abstract    I2CIO
@@ -45,6 +47,14 @@ public:
     @discussion Class constructor constructor.
     */
     I2CIO();
+
+    /*!
+    @method
+    @abstract   Constructor method
+    @discussion Class constructor constructor.
+    @param      wire: Wire instance to use
+    */
+    I2CIO(TwoWire& wire);
 
     /*!
     @method
@@ -136,6 +146,7 @@ public:
 
 
 private:
+    TwoWire& _wire;
     uint8_t _shadow;      // Shadow output
     uint8_t _dirMask;     // Direction mask
     uint8_t _i2cAddr;     // I2C address

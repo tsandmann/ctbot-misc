@@ -37,27 +37,26 @@
 
 // CONSTRUCTOR
 // ---------------------------------------------------------------------------
-I2CIO::I2CIO() {
-    _i2cAddr     = 0x0;
-    _dirMask     = 0xff;    // mark all as INPUTs
-    _shadow      = 0x0;     // no values set
-    _initialised = false;
-}
+I2CIO::I2CIO() : _wire(Wire), _shadow(0), _dirMask(0xff), _i2cAddr(0), _initialised(false) {}
+
+// CONSTRUCTOR
+// ---------------------------------------------------------------------------
+I2CIO::I2CIO(TwoWire& wire) : _wire(wire), _shadow(0), _dirMask(0xff), _i2cAddr(0), _initialised(false) {}
+
 
 // PUBLIC METHODS
 // ---------------------------------------------------------------------------
-
 
 //
 // begin
 bool I2CIO::begin(uint8_t i2cAddr) {
     _i2cAddr = i2cAddr;
-    Wire.begin();
+    _wire.begin();
 
     _initialised = isAvailable(_i2cAddr);
 
     if (_initialised) {
-        _shadow = Wire.read(); // Remove the byte read don't need it.
+        _shadow = _wire.read(); // Remove the byte read don't need it.
     }
     return _initialised;
 }
@@ -92,8 +91,8 @@ uint8_t I2CIO::read() {
     uint8_t retVal = 0;
 
     if (_initialised) {
-        Wire.requestFrom(_i2cAddr, static_cast<uint8_t>(1U));
-        retVal = _dirMask & Wire.read();
+        _wire.requestFrom(_i2cAddr, static_cast<uint8_t>(1U));
+        retVal = _dirMask & _wire.read();
     }
     return retVal;
 }
@@ -108,9 +107,9 @@ int I2CIO::write(uint8_t value) {
         // outputs updating the output shadow of the device
         _shadow = value & ~_dirMask;
 
-        Wire.beginTransmission(_i2cAddr);
-        Wire.write(_shadow);
-        status = Wire.endTransmission();
+        _wire.beginTransmission(_i2cAddr);
+        _wire.write(_shadow);
+        status = _wire.endTransmission();
     }
     return status == 0;
 }
@@ -155,8 +154,8 @@ int I2CIO::digitalWrite(uint8_t pin, uint8_t level) {
 // PRIVATE METHODS
 // ---------------------------------------------------------------------------
 bool I2CIO::isAvailable (uint8_t i2cAddr) {
-    Wire.beginTransmission(i2cAddr);
-    int error = Wire.endTransmission();
+    _wire.beginTransmission(i2cAddr);
+    int error = _wire.endTransmission();
     if (error == 0) {
         return true;
     } else { // Some error occured

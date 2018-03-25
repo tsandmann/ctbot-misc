@@ -30,6 +30,7 @@
 
 #include <Arduino.h>
 #include <inttypes.h>
+#include <Wire.h>
 
 #include "I2CIO.h"
 #include "LiquidCrystal_I2C.h"
@@ -91,31 +92,31 @@
 
 // CONSTRUCTORS
 // ---------------------------------------------------------------------------
-LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_Addr) {
+LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_Addr) : _i2cio(Wire2) {
     config(lcd_Addr, EN, RW, RS, D4, D5, D6, D7);
 }
 
 
-LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_Addr, uint8_t backlighPin, t_backlighPol pol = POSITIVE) {
+LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_Addr, uint8_t backlighPin, t_backlighPol pol = POSITIVE) : _i2cio(Wire2) {
     config(lcd_Addr, EN, RW, RS, D4, D5, D6, D7);
     setBacklightPin(backlighPin, pol);
 }
 
-LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_Addr, uint8_t En, uint8_t Rw, uint8_t Rs) {
+LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_Addr, uint8_t En, uint8_t Rw, uint8_t Rs) : _i2cio(Wire2) {
     config(lcd_Addr, En, Rw, Rs, D4, D5, D6, D7);
 }
 
-LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_Addr, uint8_t En, uint8_t Rw, uint8_t Rs, uint8_t backlighPin, t_backlighPol pol = POSITIVE) {
+LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_Addr, uint8_t En, uint8_t Rw, uint8_t Rs, uint8_t backlighPin, t_backlighPol pol = POSITIVE) : _i2cio(Wire2) {
     config(lcd_Addr, En, Rw, Rs, D4, D5, D6, D7);
     setBacklightPin(backlighPin, pol);
 }
 
-LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_Addr, uint8_t En, uint8_t Rw, uint8_t Rs, uint8_t d4, uint8_t d5, uint8_t d6, uint8_t d7) {
+LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_Addr, uint8_t En, uint8_t Rw, uint8_t Rs, uint8_t d4, uint8_t d5, uint8_t d6, uint8_t d7) : _i2cio(Wire2) {
     config(lcd_Addr, En, Rw, Rs, d4, d5, d6, d7);
 }
 
 LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_Addr, uint8_t En, uint8_t Rw, uint8_t Rs, uint8_t d4, uint8_t d5, uint8_t d6, uint8_t d7,
-    uint8_t backlighPin, t_backlighPol pol = POSITIVE) {
+    uint8_t backlighPin, t_backlighPol pol = POSITIVE) : _i2cio(Wire2) {
     config(lcd_Addr, En, Rw, Rs, d4, d5, d6, d7);
     setBacklightPin(backlighPin, pol);
 }
